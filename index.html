@@ -11,6 +11,7 @@
 <body>
 <main class="app">
 <header><h1>Track Cycling Timer</h1><div id="status" class="status">尚未開始</div></header>
+
 <section class="card setup">
 <h2>訓練設定</h2>
 <label>選手名單（每行一位）</label>
@@ -20,7 +21,18 @@
 <label>目標單圈 (秒)<input id="targetLap" type="number" value="14.8" min="1" step="0.01"></label>
 </div>
 <label>起跑領騎<select id="startingLeader"></select></label>
-<button id="prepareBtn" class="primary">載入名單</button>
+<button id="prepareBtn" class="primary">載入名單 / 齒比設定</button>
+</section>
+
+<section class="card" id="gearCard">
+<h2>選手齒比與輪胎</h2>
+<p class="hint">輪周預設值為估算；若要提高踏頻計算精度，可輸入實測輪周（mm）。</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>選手</th><th>盤片</th><th>飛輪</th><th>輪胎</th><th>輪周 mm</th><th>Rollout m</th></tr></thead>
+<tbody id="gearBody"></tbody>
+</table>
+</div>
 </section>
 
 <section class="card timer">
@@ -36,10 +48,15 @@
 <div class="summary">
 <span>Lap <strong id="lapCount">0</strong></span>
 <span>Last <strong id="lastLap">—</strong></span>
+<span>Speed <strong id="lastSpeed">—</strong></span>
+<span>Cadence <strong id="lastCadence">—</strong></span>
 <span>Δ Target <strong id="delta">—</strong></span>
 </div>
 <div class="table-wrap">
-<table><thead><tr><th>Lap</th><th>Lap time</th><th>Total</th><th>Leader</th><th>Pull</th><th>Δ</th></tr></thead><tbody id="lapsBody"></tbody></table>
+<table>
+<thead><tr><th>Lap</th><th>Dist.</th><th>Lap time</th><th>Total</th><th>Leader</th><th>Gear</th><th>km/h</th><th>rpm</th><th>Δ</th></tr></thead>
+<tbody id="lapsBody"></tbody>
+</table>
 </div>
 <button id="exportBtn">匯出 CSV</button>
 </section>
