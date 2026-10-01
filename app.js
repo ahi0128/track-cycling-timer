@@ -128,6 +128,38 @@ function renderRoster(){
   render();
   save();
 }
+function buildFullLaps(){
+  if($("segmentPreset").value!=="quarter") return [];
+  const full=[];
+  const track=Number($("trackLength").value)||250;
+  for(let i=0;i+3<state.laps.length;i+=4){
+    const group=state.laps.slice(i,i+4);
+    const lapMs=group.reduce((sum,x)=>sum+x.lapMs,0);
+    const end=group[3];
+    const leaders=[];
+    group.forEach(x=>{ if(leaders.at(-1)!==x.leader) leaders.push(x.leader); });
+    full.push({
+      lap:full.length+1,
+      distanceM:group.reduce((sum,x)=>sum+x.distanceM,0),
+      lapMs,
+      totalMs:end.totalMs,
+      splits:group.map(x=>(x.lapMs/1000).toFixed(3)),
+      leaders,
+      speedKph:speedKph(track,lapMs)
+    });
+  }
+  return full;
+}
+function renderFullLaps(){
+  const full=buildFullLaps();
+  $("fullLapCount").textContent=full.length;
+  const last=full.at(-1);
+  $("lastFullLap").textContent=last?lapFmt(last.lapMs):"—";
+  $("lastFullLapSpeed").textContent=last?last.speedKph.toFixed(1)+" km/h":"—";
+  $("fullLapsBody").innerHTML=[...full].reverse().map(x =>
+    '<tr><td>'+x.lap+'</td><td>'+x.distanceM.toFixed(1)+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.splits.join(" / ")+'</td><td>'+x.leaders.join(" → ")+'</td><td>'+x.speedKph.toFixed(1)+'</td></tr>'
+  ).join("");
+}
 function render(){
   $("leader").textContent = state.riders[state.leaderIndex] || "—";
   $("lapCount").textContent = state.laps.length;
@@ -141,10 +173,11 @@ function render(){
   $("lapsBody").innerHTML = [...state.laps].reverse().map(x =>
     '<tr><td>'+x.lap+'</td><td>'+x.cumulativeDistanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+x.distanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
   ).join("");
+  renderFullLaps();
 }
 
-$("trackLength").addEventListener("change",syncSegmentDistance);
-$("segmentPreset").addEventListener("change",syncSegmentDistance);
+$("trackLength").addEventListener("change",()=>{syncSegmentDistance();render();});
+$("segmentPreset").addEventListener("change",()=>{syncSegmentDistance();render();});
 $("segmentDistance").addEventListener("input",()=>{
   $("segmentPreset").value="custom";
   syncSegmentDistance();
@@ -244,11 +277,15 @@ $("resetBtn").addEventListener("click",()=>{
 });
 $("exportBtn").addEventListener("click",()=>{
   if(!state.laps.length) return alert("目前沒有圈速資料");
+  const full=buildFullLaps();
   const rows=[
-    ["split","cumulative_distance_m","segment_distance_m","segment_time_s","cumulative_time_s","leader","pull","chainring","sprocket","tire","circumference_mm","rollout_m","speed_kph","cadence_rpm","delta_target_s"],
+    ["record_type","split_or_lap","cumulative_distance_m","segment_distance_m","time_s","cumulative_time_s","leader_or_sequence","pull","chainring","sprocket","tire","circumference_mm","rollout_m","speed_kph","cadence_rpm","delta_target_s","quarter_splits"],
     ...state.laps.map(x=>[
-      x.lap,x.cumulativeDistanceM.toFixed(3),x.distanceM.toFixed(3),(x.lapMs/1000).toFixed(3),(x.totalMs/1000).toFixed(3),x.leader,x.pull,
-      x.chainring,x.sprocket,x.tire,x.circumferenceMm,x.rolloutM.toFixed(3),x.speedKph.toFixed(2),x.cadenceRpm.toFixed(1),x.delta.toFixed(3)
+      "split",x.lap,x.cumulativeDistanceM.toFixed(3),x.distanceM.toFixed(3),(x.lapMs/1000).toFixed(3),(x.totalMs/1000).toFixed(3),x.leader,x.pull,
+      x.chainring,x.sprocket,x.tire,x.circumferenceMm,x.rolloutM.toFixed(3),x.speedKph.toFixed(2),x.cadenceRpm.toFixed(1),x.delta.toFixed(3),""
+    ]),
+    ...full.map(x=>[
+      "full_lap",x.lap,(x.lap*Number($("trackLength").value)).toFixed(3),x.distanceM.toFixed(3),(x.lapMs/1000).toFixed(3),(x.totalMs/1000).toFixed(3),x.leaders.join(" > "),"","","","","","",x.speedKph.toFixed(2),"","",x.splits.join(" / ")
     ])
   ];
   const csv = rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(",")).join("\n");
