@@ -85,6 +85,22 @@
 </div>
 <button id="exportBtn">匯出 CSV</button>
 </section>
+
+<section class="card">
+<h2>完整圈自動合成</h2>
+<p class="hint">在 1/4 圈模式下，每 4 個 split 自動合成 1 圈。若同一圈內發生換棒，會顯示領騎順序。</p>
+<div class="summary">
+<span>完整圈 <strong id="fullLapCount">0</strong></span>
+<span>最近一圈 <strong id="lastFullLap">—</strong></span>
+<span>圈均速 <strong id="lastFullLapSpeed">—</strong></span>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Lap</th><th>Distance</th><th>Lap time</th><th>Total</th><th>Splits</th><th>Leader sequence</th><th>Avg km/h</th></tr></thead>
+<tbody id="fullLapsBody"></tbody>
+</table>
+</div>
+</section>
 </main>
 <script src="./app.js"></script>
 </body>
