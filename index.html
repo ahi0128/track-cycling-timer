@@ -94,7 +94,7 @@
 
 <section class="card">
 <h2>完整圈自動合成</h2>
-<p class="hint">在 1/4 圈模式下，每 4 個 split 自動合成 1 圈。若同一圈內發生換棒，會顯示領騎順序。</p>
+<p class="hint">系統依目前區段設定自動合成完整圈：1/4 圈每 4 段、1/2 圈每 2 段、1 圈每 1 段。若同一圈內發生換棒，會保留領騎順序。</p>
 <div class="summary">
 <span>完整圈 <strong id="fullLapCount">0</strong></span>
 <span>最近一圈 <strong id="lastFullLap">—</strong></span>
@@ -109,8 +109,8 @@
 </section>
 
 <section class="card">
-<h2>1/4 圈圖像化比較</h2>
-<p class="hint">每一圈顯示 Q1–Q4 四個區段；柱越高代表速度越快。柱色固定對應領騎選手，方便辨認換棒與脫隊後的輪替。</p>
+<h2>區段圖像化比較</h2>
+<p class="hint">依目前計時區段顯示每圈各段速度；1/4 圈顯示 4 段、1/2 圈顯示 2 段、整圈顯示 1 段。柱越高代表速度越快，柱色固定對應領騎選手。</p>
 <div id="quarterBars" class="quarter-bars"></div>
 <div class="chart-wrap">
   <svg id="quarterCompareChart" viewBox="0 0 720 320" role="img" aria-label="Quarter split comparison chart"></svg>
