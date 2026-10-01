@@ -9,6 +9,7 @@ const TIRE_PRESETS = {
 let state = {
   riders: [],
   riderSetup: {},
+  activeRiders: [],
   leaderIndex: 0,
   running: false,
   startAt: 0,
@@ -36,6 +37,11 @@ function currentElapsed(){ return state.running ? state.elapsed + (now() - state
 function refreshClock(){
   $("clock").textContent = fmt(currentElapsed());
   if(state.running) raf = requestAnimationFrame(refreshClock);
+}
+const RIDER_COLORS=["#00E5FF","#FFEA00","#FF3D71","#7CFF00","#FF8A00","#B388FF","#00FFA8","#FF5CC8"];
+function riderColor(name){
+  const i=Math.max(0,state.riders.indexOf(name));
+  return RIDER_COLORS[i%RIDER_COLORS.length];
 }
 function defaultSetup(){
   return {chainring:64, sprocket:15, tire:"700x23C", circumferenceMm:2096};
@@ -119,14 +125,48 @@ function renderRoster(){
   const names = $("riders").value.split(/\n|,/).map(x=>x.trim()).filter(Boolean);
   state.riders = names;
   names.forEach(ensureRiderSetup);
+  if(!state.activeRiders?.length || state.activeRiders.some(n=>!names.includes(n))){
+    state.activeRiders=[...names];
+  }
   $("startingLeader").innerHTML = names.map((n,i)=>'<option value="'+i+'">'+n+'</option>').join("");
   if(names.length){
     state.leaderIndex = Math.min(state.leaderIndex, names.length-1);
     $("startingLeader").value = state.leaderIndex;
   }
   renderGearTable();
+  renderRotation();
   render();
   save();
+}
+function leaderName(){ return state.riders[state.leaderIndex] || ""; }
+function nextActiveLeader(){
+  if(!state.activeRiders?.length) return "";
+  const current=leaderName();
+  let i=state.activeRiders.indexOf(current);
+  if(i<0) i=0;
+  return state.activeRiders[(i+1)%state.activeRiders.length];
+}
+function setLeaderByName(name, eventType="manual_leader"){
+  if(!name || !state.riders.includes(name)) return;
+  const from=leaderName();
+  state.leaderIndex=state.riders.indexOf(name);
+  state.events.push({type:eventType,atMs:currentElapsed(),from,to:name,pull:state.pull});
+  renderRotation(); render(); save();
+}
+function renderRotation(){
+  const current=leaderName();
+  const next=nextActiveLeader();
+  $("nextLeader").textContent=next||"—";
+  $("manualLeaderSelect").innerHTML=state.riders.map(n=>'<option value="'+n+'" '+(n===current?'selected':'')+'>'+n+(state.activeRiders.includes(n)?"":" (OUT)")+'</option>').join("");
+  $("rotationRoster").innerHTML=state.riders.map(n=>{
+    const active=state.activeRiders.includes(n);
+    return '<button class="rider-chip '+(active?'':'inactive')+'" data-name="'+n+'" style="--rider:'+riderColor(n)+'"><span class="dot"></span>'+n+(active?'':' · RETURN')+'</button>';
+  }).join("");
+  document.querySelectorAll(".rider-chip").forEach(btn=>btn.addEventListener("click",()=>{
+    const n=btn.dataset.name;
+    if(state.activeRiders.includes(n)) setLeaderByName(n);
+    else { state.activeRiders.push(n); state.events.push({type:"return",atMs:currentElapsed(),rider:n}); renderRotation(); render(); save(); }
+  }));
 }
 function buildFullLaps(){
   if($("segmentPreset").value!=="quarter") return [];
@@ -144,6 +184,7 @@ function buildFullLaps(){
       lapMs,
       totalMs:end.totalMs,
       splits:group.map(x=>(x.lapMs/1000).toFixed(3)),
+      splitData:group.map(x=>({timeS:x.lapMs/1000,speedKph:x.speedKph,leader:x.leader})),
       leaders,
       speedKph:speedKph(track,lapMs)
     });
@@ -162,17 +203,17 @@ function renderQuarterCharts(){
     return;
   }
 
-  const all=full.flatMap(x=>x.splits.map(Number));
+  const all=full.flatMap(x=>x.splitData.map(d=>d.speedKph));
   const globalMin=Math.min(...all);
   const globalMax=Math.max(...all);
-  const range=Math.max(0.001,globalMax-globalMin);
+  const range=Math.max(0.1,globalMax-globalMin);
 
   bars.innerHTML=full.map(lap=>{
-    const splitNums=lap.splits.map(Number);
     const leaderText=lap.leaders.join(" → ");
-    const cols=splitNums.map((v,i)=>{
-      const h=32+((v-globalMin)/range)*88;
-      return '<div class="qcol"><div class="qvalue">'+v.toFixed(3)+'s</div><div class="qbar" style="height:'+h.toFixed(1)+'px"></div><div class="qlabel">Q'+(i+1)+'</div></div>';
+    const cols=lap.splitData.map((d,i)=>{
+      const h=32+((d.speedKph-globalMin)/range)*88;
+      const c=riderColor(d.leader);
+      return '<div class="qcol"><div class="qvalue">'+d.speedKph.toFixed(1)+' km/h<br><small>'+d.timeS.toFixed(3)+'s</small></div><div class="qbar" style="height:'+h.toFixed(1)+'px;background:'+c+'"></div><div class="qlabel">Q'+(i+1)+' · '+d.leader+'</div></div>';
     }).join("");
     return '<div class="lap-chart-card"><div class="lap-chart-title">Lap '+lap.lap+' · '+lapFmt(lap.lapMs)+'s</div><div class="lap-chart-leader">'+leaderText+'</div><div class="qgrid">'+cols+'</div></div>';
   }).join("");
@@ -194,21 +235,17 @@ function renderQuarterCharts(){
   });
 
   full.forEach((lap,idx)=>{
-    const vals=lap.splits.map(Number);
+    const vals=lap.splitData.map(d=>d.speedKph);
     const points=vals.map((v,i)=>xs[i]+','+y(v)).join(' ');
-    const hue=(idx*67)%360;
-    svgHtml+='<polyline points="'+points+'" fill="none" stroke="hsl('+hue+' 80% 65%)" stroke-width="3" vector-effect="non-scaling-stroke"/>';
-    vals.forEach((v,i)=>{
-      svgHtml+='<circle cx="'+xs[i]+'" cy="'+y(v)+'" r="4" fill="hsl('+hue+' 80% 65%)"/>';
+    svgHtml+='<polyline points="'+points+'" fill="none" stroke="#94a3b8" stroke-opacity=".45" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+    lap.splitData.forEach((d,i)=>{
+      svgHtml+='<circle cx="'+xs[i]+'" cy="'+y(d.speedKph)+'" r="5" fill="'+riderColor(d.leader)+'"/>';
     });
   });
-  svgHtml+='<text x="12" y="16" class="chart-axis">秒</text>';
+  svgHtml+='<text x="12" y="16" class="chart-axis">km/h</text>';
   svg.innerHTML=svgHtml;
 
-  legend.innerHTML=full.map((lap,idx)=>{
-    const hue=(idx*67)%360;
-    return '<span><i style="background:hsl('+hue+' 80% 65%)"></i>Lap '+lap.lap+' ('+lapFmt(lap.lapMs)+'s)</span>';
-  }).join("");
+  legend.innerHTML=state.riders.map(n=>'<span><i style="background:'+riderColor(n)+'"></i>'+n+(state.activeRiders.includes(n)?"":" (OUT)")+'</span>').join("");
 }
 
 function renderFullLaps(){
@@ -224,6 +261,7 @@ function renderFullLaps(){
 }
 function render(){
   $("leader").textContent = state.riders[state.leaderIndex] || "—";
+  $("leader").style.color = leaderName()?riderColor(leaderName()):"";
   $("lapCount").textContent = state.laps.length;
   const last = state.laps.at(-1);
   $("lastLap").textContent = last ? lapFmt(last.lapMs) : "—";
@@ -236,6 +274,7 @@ function render(){
     '<tr><td>'+x.lap+'</td><td>'+x.cumulativeDistanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+x.distanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
   ).join("");
   renderFullLaps();
+  renderRotation();
 }
 
 $("trackLength").addEventListener("change",()=>{syncSegmentDistance();render();});
@@ -249,9 +288,9 @@ syncSegmentDistance();
 $("prepareBtn").addEventListener("click",()=>{
   renderRoster();
   state.leaderIndex = Number($("startingLeader").value || 0);
+  state.activeRiders=[...state.riders];
   state.pull = 1;
-  render();
-  save();
+  renderRotation(); render(); save();
 });
 $("startingLeader").addEventListener("change",()=>{
   state.leaderIndex = Number($("startingLeader").value);
@@ -312,14 +351,29 @@ $("lapBtn").addEventListener("click",()=>{
   save();
 });
 $("changeBtn").addEventListener("click",()=>{
-  if(!state.riders.length) return;
-  const t = currentElapsed();
-  const from = state.riders[state.leaderIndex];
-  state.leaderIndex = (state.leaderIndex+1)%state.riders.length;
-  state.pull += 1;
-  state.events.push({type:"change",atMs:t,from,to:state.riders[state.leaderIndex],pull:state.pull});
-  render();
-  save();
+  if(!state.activeRiders?.length) return;
+  const t=currentElapsed();
+  const from=leaderName();
+  const to=nextActiveLeader();
+  if(!to) return;
+  state.leaderIndex=state.riders.indexOf(to);
+  state.pull+=1;
+  state.events.push({type:"change",atMs:t,from,to,pull:state.pull});
+  renderRotation(); render(); save();
+});
+$("setLeaderBtn").addEventListener("click",()=>{
+  const to=$("manualLeaderSelect").value;
+  if(to && to!==leaderName()){ state.pull+=1; setLeaderByName(to,"manual_change"); }
+});
+$("outBtn").addEventListener("click",()=>{
+  const out=leaderName();
+  if(!out) return;
+  if(state.activeRiders.length<=1) return alert("至少需要保留一位有效選手");
+  const next=nextActiveLeader();
+  state.activeRiders=state.activeRiders.filter(n=>n!==out);
+  state.events.push({type:"out",atMs:currentElapsed(),rider:out,next});
+  if(next && next!==out){ state.leaderIndex=state.riders.indexOf(next); state.pull+=1; }
+  renderRotation(); render(); save();
 });
 $("undoBtn").addEventListener("click",()=>{
   if(state.laps.length){
@@ -365,6 +419,7 @@ if(saved){
   try{
     Object.assign(state,JSON.parse(saved));
     if(!state.riderSetup) state.riderSetup={};
+    if(!state.activeRiders?.length) state.activeRiders=[...state.riders];
     $("riders").value = state.riders.join("\n");
     renderRoster();
     $("startingLeader").value = state.leaderIndex;
