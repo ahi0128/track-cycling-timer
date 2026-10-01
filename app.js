@@ -208,11 +208,12 @@ function buildFullLaps(){
 function showFullLapBoard(fullLap){
   const board=$("lapBoard");
   $("lapBoardMeta").textContent="LAP "+fullLap.lap;
-  $("lapBoardTime").textContent=(fullLap.lapMs/1000).toFixed(1);
+  const fullLapSeconds=fullLap.lapMs/1000;
+  $("lapBoardTime").textContent=(fullLapSeconds%10).toFixed(1);
   board.classList.add("show");
   board.setAttribute("aria-hidden","false");
   clearTimeout(lapBoardTimer);
-  lapBoardTimer=setTimeout(hideFullLapBoard,3000);
+  lapBoardTimer=setTimeout(hideFullLapBoard,2000);
 }
 function hideFullLapBoard(){
   const board=$("lapBoard");
