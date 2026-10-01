@@ -412,7 +412,7 @@ $("setLeaderBtn").addEventListener("click",()=>{
   const to=$("manualLeaderSelect").value;
   if(to && to!==leaderName()){ state.pull+=1; setLeaderByName(to,"manual_change"); }
 });
-$("outBtn").addEventListener("click",()=>{
+$("outBtnTop").addEventListener("click",()=>{
   const out=leaderName();
   if(!out) return;
   if(state.activeRiders.length<=1) return alert("至少需要保留一位有效選手");
