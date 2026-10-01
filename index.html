@@ -93,7 +93,7 @@
 <tbody id="lapsBody"></tbody>
 </table>
 </div>
-<button id="exportBtn">匯出 CSV</button>
+<div class="grid2 export-actions"><button id="exportBtn">匯出精簡 CSV</button><button id="exportXlsxBtn" class="primary">匯出 Excel 報告</button></div>
 </section>
 
 <section class="card">
@@ -115,13 +115,16 @@
 <section class="card">
 <h2>區段圖像化比較</h2>
 <p class="hint">依目前計時區段顯示每圈各段速度；1/4 圈顯示 4 段、1/2 圈顯示 2 段、整圈顯示 1 段。柱越高代表速度越快，柱色固定對應領騎選手。</p>
-<div id="quarterBars" class="quarter-bars"></div>
+<div class="continuous-chart-wrap">
+  <div id="continuousBars" class="continuous-bars"></div>
+</div>
 <div class="chart-wrap">
-  <svg id="quarterCompareChart" viewBox="0 0 720 320" role="img" aria-label="Quarter split comparison chart"></svg>
+  <svg id="quarterCompareChart" viewBox="0 0 720 320" role="img" aria-label="Segment speed comparison chart"></svg>
 </div>
 <div id="chartLegend" class="chart-legend"></div>
 </section>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
