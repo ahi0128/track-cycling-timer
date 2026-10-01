@@ -56,3 +56,11 @@ button:active{transform:scale(.99)}button.primary{background:#2563eb}button.acce
   .lap-board-time{font-size:min(42vw,82vh)}
   .lap-board-meta{font-size:clamp(18px,2.4vw,32px)}
 }
+
+.export-actions{margin-top:10px}
+.continuous-chart-wrap{overflow-x:auto;background:#0f172a;border:1px solid #26314d;border-radius:14px;padding:12px;margin-bottom:14px}
+.continuous-bars{height:240px;display:flex;align-items:flex-end;gap:5px;min-width:max-content;padding:12px 8px 8px}
+.continuous-col{width:30px;height:210px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:0 0 30px}
+.continuous-value{font-size:10px;font-variant-numeric:tabular-nums;margin-bottom:3px;transform:rotate(-45deg);transform-origin:center;white-space:nowrap}
+.continuous-bar{width:18px;min-height:8px;border-radius:4px 4px 1px 1px}
+.continuous-label,.continuous-lap{font-size:9px;color:#94a3b8;line-height:1.15;margin-top:3px}
