@@ -16,10 +16,35 @@
 <h2>訓練設定</h2>
 <label>選手名單（每行一位）</label>
 <textarea id="riders" rows="6" placeholder="許仕儒&#10;張誌盛&#10;李靖烽&#10;杜志濠"></textarea>
+
 <div class="grid2">
-<label>場地長度 (m)<input id="trackLength" type="number" value="250" min="100" step="1"></label>
-<label>目標單圈 (秒)<input id="targetLap" type="number" value="14.8" min="1" step="0.01"></label>
+<label>場地周長
+<select id="trackLength">
+<option value="250">250 m</option>
+<option value="333.333">333.333 m</option>
+</select>
+</label>
+
+<label>每次 LAP 計時距離
+<select id="segmentPreset">
+<option value="quarter">1/4 圈</option>
+<option value="half">1/2 圈</option>
+<option value="full">1 圈</option>
+<option value="custom">自訂</option>
+</select>
+</label>
 </div>
+
+<div class="grid2">
+<label>實際計時距離 (m)
+<input id="segmentDistance" type="number" value="62.5" min="1" step="0.001">
+</label>
+<label>目標區段時間 (秒)
+<input id="targetLap" type="number" value="3.70" min="0.1" step="0.01">
+</label>
+</div>
+
+<p id="distanceHint" class="hint">250 m 場地 × 1/4 圈 = 62.500 m</p>
 <label>起跑領騎<select id="startingLeader"></select></label>
 <button id="prepareBtn" class="primary">載入名單 / 齒比設定</button>
 </section>
@@ -46,7 +71,7 @@
 
 <section class="card">
 <div class="summary">
-<span>Lap <strong id="lapCount">0</strong></span>
+<span>Split <strong id="lapCount">0</strong></span>
 <span>Last <strong id="lastLap">—</strong></span>
 <span>Speed <strong id="lastSpeed">—</strong></span>
 <span>Cadence <strong id="lastCadence">—</strong></span>
@@ -54,7 +79,7 @@
 </div>
 <div class="table-wrap">
 <table>
-<thead><tr><th>Lap</th><th>Dist.</th><th>Lap time</th><th>Total</th><th>Leader</th><th>Gear</th><th>km/h</th><th>rpm</th><th>Δ</th></tr></thead>
+<thead><tr><th>#</th><th>Dist.</th><th>Seg.</th><th>Time</th><th>Total</th><th>Leader</th><th>Gear</th><th>km/h</th><th>rpm</th><th>Δ</th></tr></thead>
 <tbody id="lapsBody"></tbody>
 </table>
 </div>
