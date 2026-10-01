@@ -168,14 +168,27 @@ function renderRotation(){
     else { state.activeRiders.push(n); state.events.push({type:"return",atMs:currentElapsed(),rider:n}); renderRotation(); render(); save(); }
   }));
 }
+function segmentsPerFullLap(){
+  const preset=$("segmentPreset").value;
+  if(preset==="quarter") return 4;
+  if(preset==="half") return 2;
+  if(preset==="full") return 1;
+  const track=Number($("trackLength").value)||250;
+  const distance=Number($("segmentDistance").value)||0;
+  if(!distance) return 0;
+  const n=Math.round(track/distance);
+  if(n<1) return 0;
+  return Math.abs(track-(distance*n))<=0.5 ? n : 0;
+}
 function buildFullLaps(){
-  if($("segmentPreset").value!=="quarter") return [];
+  const segmentsPerLap=segmentsPerFullLap();
+  if(!segmentsPerLap) return [];
   const full=[];
   const track=Number($("trackLength").value)||250;
-  for(let i=0;i+3<state.laps.length;i+=4){
-    const group=state.laps.slice(i,i+4);
+  for(let i=0;i+segmentsPerLap-1<state.laps.length;i+=segmentsPerLap){
+    const group=state.laps.slice(i,i+segmentsPerLap);
     const lapMs=group.reduce((sum,x)=>sum+x.lapMs,0);
-    const end=group[3];
+    const end=group[group.length-1];
     const leaders=[];
     group.forEach(x=>{ if(leaders.at(-1)!==x.leader) leaders.push(x.leader); });
     full.push({
@@ -196,8 +209,10 @@ function renderQuarterCharts(){
   const bars=$("quarterBars");
   const svg=$("quarterCompareChart");
   const legend=$("chartLegend");
+  const segmentsPerLap=segmentsPerFullLap();
   if(!full.length){
-    bars.innerHTML='<div class="empty-chart">完成 4 個 1/4 圈 split 後會出現圖表。</div>';
+    const need=segmentsPerLap||"可整除一圈的";
+    bars.innerHTML='<div class="empty-chart">完成 '+need+' 個區段 split 後會出現完整圈圖表。</div>';
     svg.innerHTML='';
     legend.innerHTML='';
     return;
@@ -213,14 +228,15 @@ function renderQuarterCharts(){
     const cols=lap.splitData.map((d,i)=>{
       const h=32+((d.speedKph-globalMin)/range)*88;
       const c=riderColor(d.leader);
-      return '<div class="qcol"><div class="qvalue">'+d.speedKph.toFixed(1)+' km/h<br><small>'+d.timeS.toFixed(3)+'s</small></div><div class="qbar" style="height:'+h.toFixed(1)+'px;background:'+c+'"></div><div class="qlabel">Q'+(i+1)+' · '+d.leader+'</div></div>';
+      return '<div class="qcol"><div class="qvalue">'+d.speedKph.toFixed(1)+' km/h<br><small>'+d.timeS.toFixed(3)+'s</small></div><div class="qbar" style="height:'+h.toFixed(1)+'px;background:'+c+'"></div><div class="qlabel">S'+(i+1)+' · '+d.leader+'</div></div>';
     }).join("");
-    return '<div class="lap-chart-card"><div class="lap-chart-title">Lap '+lap.lap+' · '+lapFmt(lap.lapMs)+'s</div><div class="lap-chart-leader">'+leaderText+'</div><div class="qgrid">'+cols+'</div></div>';
+    return '<div class="lap-chart-card"><div class="lap-chart-title">Lap '+lap.lap+' · '+lapFmt(lap.lapMs)+'s</div><div class="lap-chart-leader">'+leaderText+'</div><div class="qgrid" style="grid-template-columns:repeat('+lap.splitData.length+',1fr)">'+cols+'</div></div>';
   }).join("");
 
   const W=720,H=320,left=54,right=20,top=24,bottom=46;
   const plotW=W-left-right,plotH=H-top-bottom;
-  const xs=[0,1,2,3].map(i=>left+(plotW/3)*i);
+  const pointCount=full[0].splitData.length;
+  const xs=Array.from({length:pointCount},(_,i)=>pointCount===1?left+plotW/2:left+(plotW/(pointCount-1))*i);
   const y=v=>top+((globalMax-v)/range)*plotH;
 
   let svgHtml='';
@@ -231,7 +247,7 @@ function renderQuarterCharts(){
     svgHtml+='<text x="'+(left-8)+'" y="'+(yy+4)+'" class="chart-axis" text-anchor="end">'+val.toFixed(2)+'</text>';
   }
   xs.forEach((x,i)=>{
-    svgHtml+='<text x="'+x+'" y="'+(H-16)+'" class="chart-axis" text-anchor="middle">Q'+(i+1)+'</text>';
+    svgHtml+='<text x="'+x+'" y="'+(H-16)+'" class="chart-axis" text-anchor="middle">S'+(i+1)+'</text>';
   });
 
   full.forEach((lap,idx)=>{
