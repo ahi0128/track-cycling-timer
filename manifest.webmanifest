@@ -1,0 +1,9 @@
+{
+  "name":"Track Cycling Timer",
+  "short_name":"Track Timer",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#0b1020",
+  "theme_color":"#111827",
+  "description":"Coach timing tool for track cycling team pursuit sessions."
+}
