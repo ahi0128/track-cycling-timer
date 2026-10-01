@@ -13,3 +13,15 @@ button:active{transform:scale(.99)}button.primary{background:#2563eb}button.acce
 @media(max-width:600px){.clock{font-size:42px}.leader{font-size:36px}h1{font-size:20px}.summary{grid-template-columns:1fr 1fr 1fr}}
 .hint{color:#94a3b8;font-size:13px;line-height:1.45}
 #fullLapsBody td:nth-child(5),#fullLapsBody td:nth-child(6){text-align:left}
+
+.quarter-bars{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:12px 0 18px}
+.lap-chart-card{background:#0f172a;border:1px solid #26314d;border-radius:14px;padding:12px}
+.lap-chart-title{font-weight:800;font-size:16px}.lap-chart-leader{font-size:12px;color:#94a3b8;margin-top:3px;min-height:18px}
+.qgrid{height:160px;display:grid;grid-template-columns:repeat(4,1fr);align-items:end;gap:8px;margin-top:8px}
+.qcol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}.qvalue{font-size:11px;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.qbar{width:75%;min-height:18px;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,#60a5fa,#2563eb)}.qlabel{font-size:12px;color:#94a3b8;margin-top:5px}
+.chart-wrap{width:100%;overflow:auto;background:#0f172a;border:1px solid #26314d;border-radius:14px;padding:8px}
+#quarterCompareChart{width:100%;min-width:620px;height:auto;display:block}
+.chart-grid{stroke:#334155;stroke-width:1}.chart-axis{fill:#94a3b8;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.chart-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font-size:12px;color:#cbd5e1}.chart-legend span{display:inline-flex;align-items:center;gap:6px}
+.chart-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}.empty-chart{color:#94a3b8;padding:18px;text-align:center;background:#0f172a;border-radius:12px}
