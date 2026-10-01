@@ -64,3 +64,18 @@ button:active{transform:scale(.99)}button.primary{background:#2563eb}button.acce
 .continuous-value{font-size:10px;font-variant-numeric:tabular-nums;margin-bottom:3px;transform:rotate(-45deg);transform-origin:center;white-space:nowrap}
 .continuous-bar{width:18px;min-height:8px;border-radius:4px 4px 1px 1px}
 .continuous-label,.continuous-lap{font-size:9px;color:#94a3b8;line-height:1.15;margin-top:3px}
+
+@media(max-width:600px){
+  #gearCard .table-wrap{overflow:visible;max-height:none}
+  #gearCard table,#gearCard thead,#gearCard tbody,#gearCard tr,#gearCard th,#gearCard td{display:block;width:100%}
+  #gearCard thead{display:none}
+  #gearCard tr{background:#0f172a;border:1px solid #26314d;border-radius:14px;padding:12px;margin-bottom:12px}
+  #gearCard td{border:0;padding:6px 0;text-align:left!important;white-space:normal}
+  #gearCard td:first-child{font-size:18px;font-weight:800;margin-bottom:4px}
+  #gearCard td:nth-child(2)::before{content:"盤片";display:block;color:#94a3b8;font-size:12px;margin-bottom:3px}
+  #gearCard td:nth-child(3)::before{content:"飛輪";display:block;color:#94a3b8;font-size:12px;margin-bottom:3px}
+  #gearCard td:nth-child(4)::before{content:"輪胎";display:block;color:#94a3b8;font-size:12px;margin-bottom:3px}
+  #gearCard td:nth-child(5)::before{content:"輪周 mm";display:block;color:#94a3b8;font-size:12px;margin-bottom:3px}
+  #gearCard td:nth-child(6)::before{content:"Rollout m";display:block;color:#94a3b8;font-size:12px;margin-bottom:3px}
+  #gearCard .gear-input{width:100%;min-width:0}
+}
