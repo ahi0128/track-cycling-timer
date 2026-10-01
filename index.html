@@ -66,6 +66,12 @@
 <div id="clock" class="clock">00:00.000</div>
 <div class="grid2"><button id="startStopBtn" class="primary big">START</button><button id="lapBtn" class="big">LAP</button></div>
 <div class="grid2"><button id="changeBtn" class="accent big">CHANGE</button><button id="undoBtn" class="big">UNDO</button></div>
+<div class="rotation-panel">
+  <div><span class="mini-label">下一棒</span><strong id="nextLeader">—</strong></div>
+  <select id="manualLeaderSelect"></select>
+  <div class="grid2"><button id="setLeaderBtn">指定領騎</button><button id="outBtn" class="danger">目前選手 OUT</button></div>
+  <div id="rotationRoster" class="rotation-roster"></div>
+</div>
 <button id="resetBtn" class="danger">RESET SESSION</button>
 </section>
 
@@ -104,7 +110,7 @@
 
 <section class="card">
 <h2>1/4 圈圖像化比較</h2>
-<p class="hint">每一圈顯示 Q1–Q4 四個區段；柱越高代表該區段耗時越長。下方折線圖可直接比較不同完整圈的速度輪廓。</p>
+<p class="hint">每一圈顯示 Q1–Q4 四個區段；柱越高代表速度越快。柱色固定對應領騎選手，方便辨認換棒與脫隊後的輪替。</p>
 <div id="quarterBars" class="quarter-bars"></div>
 <div class="chart-wrap">
   <svg id="quarterCompareChart" viewBox="0 0 720 320" role="img" aria-label="Quarter split comparison chart"></svg>
