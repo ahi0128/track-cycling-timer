@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Track Cycling Timer</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app">
+<header><h1>Track Cycling Timer</h1><div id="status" class="status">尚未開始</div></header>
+<section class="card setup">
+<h2>訓練設定</h2>
+<label>選手名單（每行一位）</label>
+<textarea id="riders" rows="6" placeholder="許仕儒&#10;張誌盛&#10;李靖烽&#10;杜志濠"></textarea>
+<div class="grid2">
+<label>場地長度 (m)<input id="trackLength" type="number" value="250" min="100" step="1"></label>
+<label>目標單圈 (秒)<input id="targetLap" type="number" value="14.8" min="1" step="0.01"></label>
+</div>
+<label>起跑領騎<select id="startingLeader"></select></label>
+<button id="prepareBtn" class="primary">載入名單</button>
+</section>
+
+<section class="card timer">
+<div class="leader-label">目前領騎</div>
+<div id="leader" class="leader">—</div>
+<div id="clock" class="clock">00:00.000</div>
+<div class="grid2"><button id="startStopBtn" class="primary big">START</button><button id="lapBtn" class="big">LAP</button></div>
+<div class="grid2"><button id="changeBtn" class="accent big">CHANGE</button><button id="undoBtn" class="big">UNDO</button></div>
+<button id="resetBtn" class="danger">RESET SESSION</button>
+</section>
+
+<section class="card">
+<div class="summary">
+<span>Lap <strong id="lapCount">0</strong></span>
+<span>Last <strong id="lastLap">—</strong></span>
+<span>Δ Target <strong id="delta">—</strong></span>
+</div>
+<div class="table-wrap">
+<table><thead><tr><th>Lap</th><th>Lap time</th><th>Total</th><th>Leader</th><th>Pull</th><th>Δ</th></tr></thead><tbody id="lapsBody"></tbody></table>
+</div>
+<button id="exportBtn">匯出 CSV</button>
+</section>
+</main>
+<script src="./app.js"></script>
+</body>
+</html>
