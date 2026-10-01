@@ -14,6 +14,11 @@ Mobile-first timing tool for track cycling coaching, especially Team Pursuit.
 - Local device persistence
 - CSV export
 - PWA/offline shell
+- Independent track circumference and timing-segment distance
+- 250 m track presets: 62.5 m (1/4), 125 m (1/2), 250 m
+- 333.333 m track presets: 83.333 m (1/4), 166.667 m (1/2), 333.333 m
+- Custom timing distance
+- Cumulative distance for quarter-lap split analysis
 
 ## Intended workflow
 1. Enter riders in riding order.
