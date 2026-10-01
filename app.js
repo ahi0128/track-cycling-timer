@@ -150,6 +150,67 @@ function buildFullLaps(){
   }
   return full;
 }
+function renderQuarterCharts(){
+  const full=buildFullLaps();
+  const bars=$("quarterBars");
+  const svg=$("quarterCompareChart");
+  const legend=$("chartLegend");
+  if(!full.length){
+    bars.innerHTML='<div class="empty-chart">完成 4 個 1/4 圈 split 後會出現圖表。</div>';
+    svg.innerHTML='';
+    legend.innerHTML='';
+    return;
+  }
+
+  const all=full.flatMap(x=>x.splits.map(Number));
+  const globalMin=Math.min(...all);
+  const globalMax=Math.max(...all);
+  const range=Math.max(0.001,globalMax-globalMin);
+
+  bars.innerHTML=full.map(lap=>{
+    const splitNums=lap.splits.map(Number);
+    const leaderText=lap.leaders.join(" → ");
+    const cols=splitNums.map((v,i)=>{
+      const h=32+((v-globalMin)/range)*88;
+      return '<div class="qcol"><div class="qvalue">'+v.toFixed(3)+'s</div><div class="qbar" style="height:'+h.toFixed(1)+'px"></div><div class="qlabel">Q'+(i+1)+'</div></div>';
+    }).join("");
+    return '<div class="lap-chart-card"><div class="lap-chart-title">Lap '+lap.lap+' · '+lapFmt(lap.lapMs)+'s</div><div class="lap-chart-leader">'+leaderText+'</div><div class="qgrid">'+cols+'</div></div>';
+  }).join("");
+
+  const W=720,H=320,left=54,right=20,top=24,bottom=46;
+  const plotW=W-left-right,plotH=H-top-bottom;
+  const xs=[0,1,2,3].map(i=>left+(plotW/3)*i);
+  const y=v=>top+((globalMax-v)/range)*plotH;
+
+  let svgHtml='';
+  for(let i=0;i<5;i++){
+    const val=globalMin+(range/4)*i;
+    const yy=y(val);
+    svgHtml+='<line x1="'+left+'" y1="'+yy+'" x2="'+(W-right)+'" y2="'+yy+'" class="chart-grid"/>';
+    svgHtml+='<text x="'+(left-8)+'" y="'+(yy+4)+'" class="chart-axis" text-anchor="end">'+val.toFixed(2)+'</text>';
+  }
+  xs.forEach((x,i)=>{
+    svgHtml+='<text x="'+x+'" y="'+(H-16)+'" class="chart-axis" text-anchor="middle">Q'+(i+1)+'</text>';
+  });
+
+  full.forEach((lap,idx)=>{
+    const vals=lap.splits.map(Number);
+    const points=vals.map((v,i)=>xs[i]+','+y(v)).join(' ');
+    const hue=(idx*67)%360;
+    svgHtml+='<polyline points="'+points+'" fill="none" stroke="hsl('+hue+' 80% 65%)" stroke-width="3" vector-effect="non-scaling-stroke"/>';
+    vals.forEach((v,i)=>{
+      svgHtml+='<circle cx="'+xs[i]+'" cy="'+y(v)+'" r="4" fill="hsl('+hue+' 80% 65%)"/>';
+    });
+  });
+  svgHtml+='<text x="12" y="16" class="chart-axis">秒</text>';
+  svg.innerHTML=svgHtml;
+
+  legend.innerHTML=full.map((lap,idx)=>{
+    const hue=(idx*67)%360;
+    return '<span><i style="background:hsl('+hue+' 80% 65%)"></i>Lap '+lap.lap+' ('+lapFmt(lap.lapMs)+'s)</span>';
+  }).join("");
+}
+
 function renderFullLaps(){
   const full=buildFullLaps();
   $("fullLapCount").textContent=full.length;
@@ -159,6 +220,7 @@ function renderFullLaps(){
   $("fullLapsBody").innerHTML=[...full].reverse().map(x =>
     '<tr><td>'+x.lap+'</td><td>'+x.distanceM.toFixed(1)+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.splits.join(" / ")+'</td><td>'+x.leaders.join(" → ")+'</td><td>'+x.speedKph.toFixed(1)+'</td></tr>'
   ).join("");
+  renderQuarterCharts();
 }
 function render(){
   $("leader").textContent = state.riders[state.leaderIndex] || "—";
