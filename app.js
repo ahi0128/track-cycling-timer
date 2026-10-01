@@ -20,6 +20,7 @@ let state = {
   events: []
 };
 let raf = null;
+let lapBoardTimer = null;
 
 function now(){ return performance.now(); }
 function fmt(ms){
@@ -204,6 +205,22 @@ function buildFullLaps(){
   }
   return full;
 }
+function showFullLapBoard(fullLap){
+  const board=$("lapBoard");
+  $("lapBoardMeta").textContent="LAP "+fullLap.lap;
+  $("lapBoardTime").textContent=(fullLap.lapMs/1000).toFixed(1);
+  board.classList.add("show");
+  board.setAttribute("aria-hidden","false");
+  clearTimeout(lapBoardTimer);
+  lapBoardTimer=setTimeout(hideFullLapBoard,3000);
+}
+function hideFullLapBoard(){
+  const board=$("lapBoard");
+  board.classList.remove("show");
+  board.setAttribute("aria-hidden","true");
+}
+$("lapBoard").addEventListener("click",hideFullLapBoard);
+
 function renderQuarterCharts(){
   const full=buildFullLaps();
   const bars=$("quarterBars");
@@ -363,7 +380,10 @@ $("lapBtn").addEventListener("click",()=>{
     cadenceRpm:cadence
   });
   state.events.push({type:"lap",atMs:total,leader,pull:state.pull});
+  const perLap=segmentsPerFullLap();
+  const completedFullLap=perLap && state.laps.length%perLap===0 ? buildFullLaps().at(-1) : null;
   render();
+  if(completedFullLap) showFullLapBoard(completedFullLap);
   save();
 });
 $("changeBtn").addEventListener("click",()=>{
@@ -403,6 +423,7 @@ $("resetBtn").addEventListener("click",()=>{
   if(!confirm("確定清除本次計時？")) return;
   cancelAnimationFrame(raf);
   state.running=false; state.startAt=0; state.elapsed=0; state.lastLapAt=0; state.pull=1; state.laps=[]; state.events=[];
+  clearTimeout(lapBoardTimer); hideFullLapBoard();
   render();
   $("clock").textContent="00:00.000";
   save();
