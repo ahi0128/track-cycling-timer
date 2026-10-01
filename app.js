@@ -103,6 +103,18 @@ function renderGearTable(){
     });
   });
 }
+function syncSegmentDistance(){
+  const track = Number($("trackLength").value) || 250;
+  const preset = $("segmentPreset").value;
+  let distance = Number($("segmentDistance").value) || track;
+  if(preset==="quarter") distance = track/4;
+  if(preset==="half") distance = track/2;
+  if(preset==="full") distance = track;
+  if(preset!=="custom") $("segmentDistance").value = distance.toFixed(3).replace(/\.000$/,"");
+  $("distanceHint").textContent = preset==="custom"
+    ? "自訂計時距離："+distance.toFixed(3)+" m"
+    : track.toFixed(3).replace(/\.000$/,"")+" m 場地 × "+(preset==="quarter"?"1/4":preset==="half"?"1/2":"1")+" 圈 = "+distance.toFixed(3)+" m";
+}
 function renderRoster(){
   const names = $("riders").value.split(/\n|,/).map(x=>x.trim()).filter(Boolean);
   state.riders = names;
@@ -127,9 +139,17 @@ function render(){
   $("startStopBtn").textContent = state.running ? "STOP" : "START";
   $("status").textContent = state.running ? "計時中" : (state.elapsed>0 ? "已暫停" : "尚未開始");
   $("lapsBody").innerHTML = [...state.laps].reverse().map(x =>
-    '<tr><td>'+x.lap+'</td><td>'+x.distanceM.toFixed(0)+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
+    '<tr><td>'+x.lap+'</td><td>'+x.cumulativeDistanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+x.distanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
   ).join("");
 }
+
+$("trackLength").addEventListener("change",syncSegmentDistance);
+$("segmentPreset").addEventListener("change",syncSegmentDistance);
+$("segmentDistance").addEventListener("input",()=>{
+  $("segmentPreset").value="custom";
+  syncSegmentDistance();
+});
+syncSegmentDistance();
 
 $("prepareBtn").addEventListener("click",()=>{
   renderRoster();
@@ -168,7 +188,8 @@ $("lapBtn").addEventListener("click",()=>{
   const lapMs = total - state.lastLapAt;
   state.lastLapAt = total;
   const target = (Number($("targetLap").value)||0)*1000;
-  const distanceM = Number($("trackLength").value)||250;
+  const distanceM = Number($("segmentDistance").value)||62.5;
+  const cumulativeDistanceM = state.laps.reduce((sum,x)=>sum + Number(x.distanceM||0),0) + distanceM;
   const leader = state.riders[state.leaderIndex] || "";
   const g = {...ensureRiderSetup(leader)};
   const speed = speedKph(distanceM, lapMs);
@@ -177,6 +198,7 @@ $("lapBtn").addEventListener("click",()=>{
   state.laps.push({
     lap:state.laps.length+1,
     distanceM,
+    cumulativeDistanceM,
     lapMs,
     totalMs:total,
     leader,
@@ -223,9 +245,9 @@ $("resetBtn").addEventListener("click",()=>{
 $("exportBtn").addEventListener("click",()=>{
   if(!state.laps.length) return alert("目前沒有圈速資料");
   const rows=[
-    ["lap","distance_m","lap_time_s","cumulative_s","leader","pull","chainring","sprocket","tire","circumference_mm","rollout_m","speed_kph","cadence_rpm","delta_target_s"],
+    ["split","cumulative_distance_m","segment_distance_m","segment_time_s","cumulative_time_s","leader","pull","chainring","sprocket","tire","circumference_mm","rollout_m","speed_kph","cadence_rpm","delta_target_s"],
     ...state.laps.map(x=>[
-      x.lap,x.distanceM.toFixed(0),(x.lapMs/1000).toFixed(3),(x.totalMs/1000).toFixed(3),x.leader,x.pull,
+      x.lap,x.cumulativeDistanceM.toFixed(3),x.distanceM.toFixed(3),(x.lapMs/1000).toFixed(3),(x.totalMs/1000).toFixed(3),x.leader,x.pull,
       x.chainring,x.sprocket,x.tire,x.circumferenceMm,x.rolloutM.toFixed(3),x.speedKph.toFixed(2),x.cadenceRpm.toFixed(1),x.delta.toFixed(3)
     ])
   ];
