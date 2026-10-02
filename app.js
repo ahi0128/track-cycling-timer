@@ -587,14 +587,18 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
       orientation:"landscape",
       fitToPage:true,
       fitToWidth:1,
-      fitToHeight:1,
+      fitToHeight:0,
       horizontalCentered:true,
       verticalCentered:false,
-      margins:{left:0.15,right:0.15,top:0.2,bottom:0.2,header:0.05,footer:0.05}
+      margins:{left:0.18,right:0.18,top:0.2,bottom:0.2,header:0.05,footer:0.05}
     }
   });
   ws.views=[{showGridLines:false}];
-  ws.properties.defaultRowHeight=15;
+  ws.properties.defaultRowHeight=16;
+
+  // Fixed report width: A:J only. Never grow horizontally with split count.
+  const widths=[8,13,13,13,18,10,12,12,12,12];
+  widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
 
   const target=targetSpeedKph();
   const totalDistance=state.laps.at(-1)?.cumulativeDistanceM||0;
@@ -602,150 +606,138 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
   const avgSpeed=totalTime?totalDistance/totalTime*3.6:0;
   const avgCadence=state.laps.length?state.laps.reduce((s,x)=>s+x.cadenceRpm,0)/state.laps.length:0;
 
-  // Main report columns A:H.
-  ws.columns=[
-    {width:7.5},{width:11},{width:11},{width:12},
-    {width:19},{width:10},{width:12},{width:12}
-  ];
-
-  ws.mergeCells("A1:H1");
+  ws.mergeCells("A1:J1");
   ws.getCell("A1").value="Track Cycling Timing Report";
-  ws.getCell("A1").font={bold:true,size:17,color:{argb:"FFFFFFFF"}};
+  ws.getCell("A1").font={bold:true,size:18,color:{argb:"FFFFFFFF"}};
   ws.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF111827"}};
   ws.getCell("A1").alignment={horizontal:"center",vertical:"middle"};
-  ws.getRow(1).height=25;
+  ws.getRow(1).height=28;
 
-  // Fixed information only once at top.
-  const fixedRows=[
-    ["Track",Number($("trackLength").value)||250,"Segment",Number($("segmentDistance").value)||0,"Target time",Number($("targetLap").value)||0,"Target speed",Number(target.toFixed(2))],
-    ["Total distance",Number(totalDistance.toFixed(1)),"Total time",Number(totalTime.toFixed(3)),"Avg speed",Number(avgSpeed.toFixed(2)),"Avg cadence",Number(avgCadence.toFixed(1))]
+  // Fixed information block, balanced across full page width.
+  const info=[
+    ["Track",Number($("trackLength").value)||250,"Segment",Number($("segmentDistance").value)||0,"Target time",Number($("targetLap").value)||0,"Target speed",Number(target.toFixed(2)),"",""],
+    ["Total distance",Number(totalDistance.toFixed(1)),"Total time",Number(totalTime.toFixed(3)),"Avg speed",Number(avgSpeed.toFixed(2)),"Avg cadence",Number(avgCadence.toFixed(1)),"",""]
   ];
-  fixedRows.forEach((vals,idx)=>{
+  info.forEach((vals,idx)=>{
     const r=2+idx;
     ws.getRow(r).values=vals;
-    ws.getRow(r).font={size:9};
+    ws.getRow(r).font={size:9.5};
     for(let c=1;c<=8;c+=2){
       ws.getCell(r,c).font={bold:true,color:{argb:"FF475569"}};
       ws.getCell(r,c+1).font={bold:true,color:{argb:"FF111827"}};
     }
   });
 
-  ws.mergeCells("A5:H5");
+  ws.mergeCells("A5:J5");
   ws.getCell("A5").value="Rider setup";
-  ws.getCell("A5").font={bold:true,size:10,color:{argb:"FFFFFFFF"}};
+  ws.getCell("A5").font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
   ws.getCell("A5").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334155"}};
 
-  ws.getRow(6).values=["Rider","Gear","Tire","Circ. mm","Rollout m","Color","",""];
-  ws.getRow(6).font={bold:true,size:8.5};
+  ws.getRow(6).values=["Rider","Gear","Tire","Circ. mm","Rollout m","Color","","","",""];
+  ws.getRow(6).font={bold:true,size:9};
   ws.getRow(6).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE2E8F0"}};
 
   let rr=7;
   state.riders.forEach(n=>{
     const g=ensureRiderSetup(n);
-    ws.getRow(rr).values=[n,g.chainring+"×"+g.sprocket,g.tire,g.circumferenceMm,Number(rolloutMeters(g).toFixed(3)),"","",""];
+    ws.getRow(rr).values=[n,g.chainring+"×"+g.sprocket,g.tire,g.circumferenceMm,Number(rolloutMeters(g).toFixed(3)),"","","","",""];
     ws.getCell(rr,6).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+riderColor(n).replace("#","")}};
-    ws.getRow(rr).font={size:8.5};
+    ws.getRow(rr).font={size:9};
     rr++;
   });
 
-  // Cell-native chart: guaranteed to remain visible even in mobile spreadsheet viewers
-  // that ignore embedded drawing images.
+  // Full-width chart image across A:J.
   const chartTitleRow=rr+1;
-  ws.mergeCells("A"+chartTitleRow+":H"+chartTitleRow);
-  ws.getCell("A"+chartTitleRow).value="Segment speed profile — bars by rider color / target line / red border below target";
-  ws.getCell("A"+chartTitleRow).font={bold:true,size:10,color:{argb:"FFFFFFFF"}};
+  ws.mergeCells("A"+chartTitleRow+":J"+chartTitleRow);
+  ws.getCell("A"+chartTitleRow).value="Segment speed profile — target line / rider colors / red border below target";
+  ws.getCell("A"+chartTitleRow).font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
   ws.getCell("A"+chartTitleRow).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334155"}};
 
-  const speeds=state.laps.map(x=>x.speedKph);
-  const chartMin=Math.floor(Math.min(...speeds,target||Infinity)-1);
-  const chartMax=Math.ceil(Math.max(...speeds,target||-Infinity)+1);
-  const bands=12;
-  const bandStep=(chartMax-chartMin)/bands;
-  const chartTop=chartTitleRow+2;
-  const chartBottom=chartTop+bands-1;
-  const chartLeftCol=2; // B
-  const chartRightCol=chartLeftCol+state.laps.length-1;
-
-  // Reserve one narrow column per split; on long sessions Excel will scale to A4 width.
-  for(let c=chartLeftCol;c<=chartRightCol;c++) ws.getColumn(c).width=Math.min(ws.getColumn(c).width||3,2.1);
-  ws.getColumn(1).width=8;
-
-  for(let b=0;b<bands;b++){
-    const row=chartTop+b;
-    const upper=chartMax-(b*bandStep);
-    ws.getCell(row,1).value=Number(upper.toFixed(1));
-    ws.getCell(row,1).font={size:7,color:{argb:"FF64748B"}};
-    ws.getRow(row).height=9;
-    for(let i=0;i<state.laps.length;i++){
-      const d=state.laps[i];
-      const col=chartLeftCol+i;
-      const bandFloor=chartMax-((b+1)*bandStep);
-      if(d.speedKph>=bandFloor){
-        ws.getCell(row,col).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+riderColor(d.leader).replace("#","")}};
-        if(target && d.speedKph<target){
-          ws.getCell(row,col).border={
-            left:{style:"thin",color:{argb:"FFEF4444"}},
-            right:{style:"thin",color:{argb:"FFEF4444"}}
-          };
-        }
-      }
-      // Draw target as a thin horizontal border across all split columns.
-      if(target && target<=upper && target>bandFloor){
-        ws.getCell(row,col).border={
-          ...(ws.getCell(row,col).border||{}),
-          top:{style:"thin",color:{argb:"FF111111"}}
-        };
-      }
-    }
-  }
-
-  const splitLabelRow=chartBottom+1;
-  ws.getCell(splitLabelRow,1).value="Split";
-  ws.getCell(splitLabelRow,1).font={bold:true,size:7};
-  state.laps.forEach((d,i)=>{
-    const cell=ws.getCell(splitLabelRow,chartLeftCol+i);
-    cell.value=d.lap;
-    cell.font={size:6};
-    cell.alignment={textRotation:90,horizontal:"center",vertical:"middle"};
-  });
-  ws.getRow(splitLabelRow).height=26;
-
-  // Also embed a rendered chart image when the viewer supports drawings.
+  const imageRow=chartTitleRow+1;
+  let chartInserted=false;
   try{
     const canvas=makeChartCanvas();
     const dataUrl=canvas.toDataURL("image/png");
     const imageId=wb.addImage({base64:dataUrl,extension:"png"});
-    const imageRow=splitLabelRow+2;
-    ws.addImage(imageId,{tl:{col:0,row:imageRow-1},ext:{width:1040,height:240}});
-  }catch(e){
-    // Native cell chart above remains as a compatibility fallback.
+    ws.addImage(imageId,{tl:{col:0,row:imageRow-1},ext:{width:980,height:285}});
+    chartInserted=true;
+  }catch(e){}
+
+  // Compact fixed-width fallback visualization in A:J.
+  // Each row contains up to 10 sequential split cells, so report width stays constant.
+  const fallbackStart=imageRow+15;
+  ws.mergeCells("A"+fallbackStart+":J"+fallbackStart);
+  ws.getCell("A"+fallbackStart).value="Speed blocks (fallback view)";
+  ws.getCell("A"+fallbackStart).font={bold:true,size:9,color:{argb:"FF475569"}};
+
+  const blockRows=Math.ceil(state.laps.length/10);
+  for(let br=0;br<blockRows;br++){
+    const valueRow=fallbackStart+1+(br*3);
+    const barRow=valueRow+1;
+    const labelRow=valueRow+2;
+    for(let j=0;j<10;j++){
+      const idx=br*10+j;
+      if(idx>=state.laps.length) break;
+      const d=state.laps[idx];
+      const col=j+1;
+      const delta=d.speedKph-target;
+
+      ws.getCell(valueRow,col).value=Number(d.speedKph.toFixed(1));
+      ws.getCell(valueRow,col).font={size:7,bold:true};
+      ws.getCell(valueRow,col).alignment={horizontal:"center"};
+
+      ws.getCell(barRow,col).value="";
+      ws.getCell(barRow,col).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+riderColor(d.leader).replace("#","")}};
+      if(delta<0){
+        ws.getCell(barRow,col).border={
+          top:{style:"medium",color:{argb:"FFEF4444"}},
+          left:{style:"medium",color:{argb:"FFEF4444"}},
+          bottom:{style:"medium",color:{argb:"FFEF4444"}},
+          right:{style:"medium",color:{argb:"FFEF4444"}}
+        };
+      }
+      ws.getRow(barRow).height=22;
+
+      ws.getCell(labelRow,col).value="S"+d.lap;
+      ws.getCell(labelRow,col).font={size:7,color:{argb:"FF64748B"}};
+      ws.getCell(labelRow,col).alignment={horizontal:"center"};
+    }
   }
 
-  // Dynamic table below: only changing fields, top-to-bottom.
-  const tableStart=splitLabelRow+17;
-  const headers=["Split","Dist. m","Seg. s","Total s","Leader / Pull","Speed","Δ Target","Cadence"];
+  // Dynamic table starts after chart/fallback and uses full A:J width.
+  const tableStart=fallbackStart+1+(blockRows*3)+2;
+  const headers=["Split","Dist. m","Seg. s","Total s","Leader","Pull","Speed","Δ Target","Cadence","Lap"];
   ws.getRow(tableStart).values=headers;
-  ws.getRow(tableStart).font={bold:true,color:{argb:"FFFFFFFF"},size:8};
+  ws.getRow(tableStart).font={bold:true,color:{argb:"FFFFFFFF"},size:9};
   ws.getRow(tableStart).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF111827"}};
   ws.getRow(tableStart).alignment={horizontal:"center",vertical:"middle"};
+  ws.getRow(tableStart).height=20;
 
+  const perLap=segmentsPerFullLap();
   state.laps.forEach((x,i)=>{
     const row=tableStart+1+i;
     const delta=x.speedKph-target;
+    const lapNo=perLap?Math.ceil(x.lap/perLap):"";
     ws.getRow(row).values=[
       x.lap,
       Number(x.cumulativeDistanceM.toFixed(3)),
       Number((x.lapMs/1000).toFixed(3)),
       Number((x.totalMs/1000).toFixed(3)),
-      x.leader+" / "+x.pull,
+      x.leader,
+      x.pull,
       Number(x.speedKph.toFixed(2)),
       Number(delta.toFixed(2)),
-      Number(x.cadenceRpm.toFixed(1))
+      Number(x.cadenceRpm.toFixed(1)),
+      lapNo
     ];
-    ws.getRow(row).font={size:7.5};
+    ws.getRow(row).font={size:8.5};
     ws.getCell(row,5).font={bold:true,color:{argb:"FF"+riderColor(x.leader).replace("#","")}};
+    ws.getCell(row,5).alignment={horizontal:"left"};
+    for(let c=1;c<=10;c++){
+      ws.getCell(row,c).alignment={vertical:"middle",horizontal:c===5?"left":"center"};
+    }
     if(delta<0){
-      for(let c=1;c<=8;c++){
+      for(let c=1;c<=10;c++){
         ws.getCell(row,c).border={
           top:{style:"thin",color:{argb:"FFEF4444"}},
           left:{style:"thin",color:{argb:"FFEF4444"}},
@@ -757,7 +749,10 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
   });
 
   const endRow=tableStart+state.laps.length;
-  ws.pageSetup.printArea="A1:"+ws.getColumn(Math.max(8,chartRightCol)).letter+endRow;
+  ws.pageSetup.printArea="A1:J"+endRow;
+  ws.pageSetup.fitToWidth=1;
+  ws.pageSetup.fitToHeight=0;
+  ws.autoFilter={from:{row:tableStart,column:1},to:{row:endRow,column:10}};
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
