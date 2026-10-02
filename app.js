@@ -65,6 +65,11 @@ function cadenceRpm(speed, setup){
   if(!rollout) return 0;
   return (speed * 1000 / 60) / rollout;
 }
+function targetSpeedKph(){
+  const distance=Number($("segmentDistance").value)||0;
+  const seconds=Number($("targetLap").value)||0;
+  return distance>0 && seconds>0 ? (distance/seconds)*3.6 : 0;
+}
 function renderGearTable(){
   $("gearBody").innerHTML = state.riders.map((name,i)=>{
     const g = ensureRiderSetup(name);
@@ -235,22 +240,31 @@ function renderQuarterCharts(){
     return;
   }
 
+  const targetSpeed=targetSpeedKph();
   const allSpeeds=state.laps.map(x=>x.speedKph);
-  const minV=Math.min(...allSpeeds);
-  const maxV=Math.max(...allSpeeds);
+  const minV=Math.min(...allSpeeds, targetSpeed||Infinity);
+  const maxV=Math.max(...allSpeeds, targetSpeed||-Infinity);
   const range=Math.max(0.1,maxV-minV);
+  const plotPx=130;
+  const basePx=40;
+  const targetH=targetSpeed ? basePx+((targetSpeed-minV)/range)*plotPx : 0;
 
-  barWrap.innerHTML=state.laps.map((d,i)=>{
-    const h=40+((d.speedKph-minV)/range)*130;
+  const barsHtml=state.laps.map((d,i)=>{
+    const h=basePx+((d.speedKph-minV)/range)*plotPx;
     const c=riderColor(d.leader);
     const lapNo=segmentsPerFullLap()?Math.ceil((i+1)/segmentsPerFullLap()):"";
+    const under=targetSpeed && d.speedKph<targetSpeed;
     return '<div class="continuous-col">'+
       '<div class="continuous-value">'+d.speedKph.toFixed(1)+'</div>'+
-      '<div class="continuous-bar" style="height:'+h.toFixed(1)+'px;background:'+c+'" title="'+d.leader+' · '+(d.lapMs/1000).toFixed(3)+'s"></div>'+
+      '<div class="continuous-bar '+(under?'under-target':'')+'" style="height:'+h.toFixed(1)+'px;background:'+c+'" title="'+d.leader+' · '+(d.lapMs/1000).toFixed(3)+'s"></div>'+
       '<div class="continuous-label">S'+(i+1)+'</div>'+
       (lapNo?'<div class="continuous-lap">L'+lapNo+'</div>':'')+
       '</div>';
   }).join("");
+  const targetLine=targetSpeed
+    ? '<div class="continuous-target-line" style="bottom:'+(35+targetH).toFixed(1)+'px"><span>Target '+targetSpeed.toFixed(1)+' km/h</span></div>'
+    : '';
+  barWrap.innerHTML=targetLine+barsHtml;
 
   if(!full.length){
     svg.innerHTML='';
@@ -259,8 +273,9 @@ function renderQuarterCharts(){
   }
 
   const all=full.flatMap(x=>x.splitData.map(d=>d.speedKph));
-  const globalMin=Math.min(...all);
-  const globalMax=Math.max(...all);
+  const targetForChart=targetSpeedKph();
+  const globalMin=Math.min(...all,targetForChart||Infinity);
+  const globalMax=Math.max(...all,targetForChart||-Infinity);
   const chartRange=Math.max(0.1,globalMax-globalMin);
 
   const W=720,H=320,left=54,right=20,top=24,bottom=46;
@@ -279,6 +294,11 @@ function renderQuarterCharts(){
   xs.forEach((x,i)=>{
     svgHtml+='<text x="'+x+'" y="'+(H-16)+'" class="chart-axis" text-anchor="middle">S'+(i+1)+'</text>';
   });
+  if(targetForChart){
+    const ty=y(targetForChart);
+    svgHtml+='<line x1="'+left+'" y1="'+ty+'" x2="'+(W-right)+'" y2="'+ty+'" class="target-speed-line"/>';
+    svgHtml+='<text x="'+(W-right-4)+'" y="'+(ty-6)+'" class="target-speed-label" text-anchor="end">Target '+targetForChart.toFixed(1)+'</text>';
+  }
 
   full.forEach(lap=>{
     const points=lap.splitData.map((d,i)=>xs[i]+','+y(d.speedKph)).join(' ');
@@ -462,7 +482,7 @@ function sessionSummaryRows(){
 
 function compactCsvRows(){
   const rows=[
-    ["split","distance_m","segment_time_s","total_time_s","leader","pull","speed_kph","cadence_rpm"],
+    ["split","distance_m","segment_time_s","total_time_s","leader","pull","speed_kph","delta_target_kph","cadence_rpm"],
     ...state.laps.map(x=>[
       x.lap,
       x.cumulativeDistanceM.toFixed(3),
@@ -471,6 +491,7 @@ function compactCsvRows(){
       x.leader,
       x.pull,
       x.speedKph.toFixed(2),
+      (x.speedKph-targetSpeedKph()).toFixed(2),
       x.cadenceRpm.toFixed(1)
     ])
   ];
@@ -489,36 +510,57 @@ function makeChartCanvas(){
   ctx.fillStyle="#ffffff";ctx.fillRect(0,0,width,height);
 
   if(!state.laps.length) return canvas;
+  const target=targetSpeedKph();
   const speeds=state.laps.map(x=>x.speedKph);
-  const minV=Math.min(...speeds),maxV=Math.max(...speeds),range=Math.max(0.1,maxV-minV);
-  const left=70,right=20,top=30,bottom=80;
+  const minV=Math.min(...speeds,target||Infinity);
+  const maxV=Math.max(...speeds,target||-Infinity);
+  const range=Math.max(0.1,maxV-minV);
+  const left=70,right=20,top=38,bottom=78;
   const plotH=height-top-bottom;
   const barW=Math.max(10,(width-left-right)/state.laps.length*0.72);
   const gap=(width-left-right)/state.laps.length;
+  const yFor=v=>top+plotH-((v-minV)/range)*plotH;
 
   ctx.strokeStyle="#d1d5db";ctx.fillStyle="#374151";ctx.font="14px sans-serif";
   for(let i=0;i<5;i++){
     const v=minV+(range/4)*i;
-    const y=top+plotH-(v-minV)/range*plotH;
+    const y=yFor(v);
     ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(width-right,y);ctx.stroke();
     ctx.fillText(v.toFixed(1),8,y+5);
   }
 
   state.laps.forEach((d,i)=>{
     const x=left+i*gap+(gap-barW)/2;
-    const h=40+((d.speedKph-minV)/range)*(plotH-40);
-    const y=top+plotH-h;
+    const y=yFor(d.speedKph);
+    const h=(top+plotH)-y;
     ctx.fillStyle=riderColor(d.leader);
     ctx.fillRect(x,y,barW,h);
+    if(target && d.speedKph<target){
+      ctx.strokeStyle="#d32f2f";
+      ctx.lineWidth=2;
+      ctx.strokeRect(x,y,barW,h);
+    }
     ctx.save();ctx.translate(x+barW/2,height-bottom+8);ctx.rotate(-Math.PI/2);
     ctx.fillStyle="#374151";ctx.font="11px sans-serif";ctx.fillText("S"+(i+1),0,0);ctx.restore();
   });
 
+  if(target){
+    const ty=yFor(target);
+    ctx.save();
+    ctx.strokeStyle="#111111";
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([8,5]);
+    ctx.beginPath();ctx.moveTo(left,ty);ctx.lineTo(width-right,ty);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="#111111";ctx.font="bold 13px sans-serif";
+    ctx.fillText("Target "+target.toFixed(1)+" km/h",Math.max(left,width-right-155),ty-7);
+    ctx.restore();
+  }
+
   ctx.fillStyle="#111827";ctx.font="bold 20px sans-serif";
-  ctx.fillText("Continuous segment speed (km/h)",left,22);
+  ctx.fillText("Continuous segment speed (km/h)",left,24);
   return canvas;
 }
-
 $("exportBtn").addEventListener("click",()=>{
   if(!state.laps.length) return alert("目前沒有圈速資料");
   const rows=compactCsvRows();
@@ -539,38 +581,113 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
   wb.creator="Track Cycling Timer";
   wb.created=new Date();
 
-  const summary=wb.addWorksheet("Summary");
-  sessionSummaryRows().forEach(r=>summary.addRow(r));
-  summary.columns=[{width:26},{width:64}];
-  summary.getRow(1).font={bold:true,size:14};
-  const ssHeader=summary.getRow(sessionSummaryRows().findIndex(r=>r[0]==="RIDER SETUP")+1);
-  ssHeader.font={bold:true};
+  const ws=wb.addWorksheet("Report",{
+    pageSetup:{
+      paperSize:9,
+      orientation:"landscape",
+      fitToPage:true,
+      fitToWidth:1,
+      fitToHeight:1,
+      margins:{left:0.2,right:0.2,top:0.3,bottom:0.3,header:0.1,footer:0.1}
+    }
+  });
+  ws.properties.defaultRowHeight=16;
+  ws.views=[{showGridLines:false}];
+  ws.columns=[
+    {width:8},{width:12},{width:13},{width:13},
+    {width:18},{width:9},{width:13},{width:13}
+  ];
 
-  const splits=wb.addWorksheet("Splits");
-  splits.addRow(["Split","Distance m","Segment time s","Total time s","Leader","Pull","Speed km/h","Cadence rpm"]);
-  state.laps.forEach(x=>splits.addRow([
-    x.lap,Number(x.cumulativeDistanceM.toFixed(3)),Number((x.lapMs/1000).toFixed(3)),Number((x.totalMs/1000).toFixed(3)),
-    x.leader,x.pull,Number(x.speedKph.toFixed(2)),Number(x.cadenceRpm.toFixed(1))
-  ]));
-  splits.getRow(1).font={bold:true};
-  splits.views=[{state:"frozen",ySplit:1}];
-  splits.columns=[{width:9},{width:14},{width:16},{width:15},{width:18},{width:9},{width:14},{width:14}];
+  const target=targetSpeedKph();
+  const totalDistance=state.laps.at(-1)?.cumulativeDistanceM||0;
+  const totalTime=state.laps.at(-1)?.totalMs/1000||0;
+  const avgSpeed=totalTime?totalDistance/totalTime*3.6:0;
+  const avgCadence=state.laps.length?state.laps.reduce((s,x)=>s+x.cadenceRpm,0)/state.laps.length:0;
 
-  const laps=wb.addWorksheet("Full Laps");
-  laps.addRow(["Lap","Lap time s","Total time s","Average speed km/h","Leader sequence","Segment splits s"]);
-  buildFullLaps().forEach(x=>laps.addRow([
-    x.lap,Number((x.lapMs/1000).toFixed(3)),Number((x.totalMs/1000).toFixed(3)),Number(x.speedKph.toFixed(2)),x.leaders.join(" > "),x.splits.join(" / ")
-  ]));
-  laps.getRow(1).font={bold:true};
-  laps.columns=[{width:8},{width:14},{width:15},{width:19},{width:34},{width:36}];
+  ws.mergeCells("A1:H1");
+  ws.getCell("A1").value="Track Cycling Timing Report";
+  ws.getCell("A1").font={bold:true,size:18,color:{argb:"FFFFFFFF"}};
+  ws.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF111827"}};
+  ws.getCell("A1").alignment={horizontal:"center",vertical:"middle"};
+  ws.getRow(1).height=28;
 
-  const chart=wb.addWorksheet("Speed Chart");
-  chart.getCell("A1").value="Continuous segment speed";
-  chart.getCell("A1").font={bold:true,size:16};
+  const info=[
+    ["Track",Number($("trackLength").value)||250,"Segment",Number($("segmentDistance").value)||0,"Target time",Number($("targetLap").value)||0,"Target speed",Number(target.toFixed(2))],
+    ["Total distance",Number(totalDistance.toFixed(1)),"Total time",Number(totalTime.toFixed(3)),"Avg speed",Number(avgSpeed.toFixed(2)),"Avg cadence",Number(avgCadence.toFixed(1))]
+  ];
+  ws.addRows(info);
+  for(let r=2;r<=3;r++){
+    ws.getRow(r).font={size:10};
+    for(let c=1;c<=8;c+=2){
+      ws.getCell(r,c).font={bold:true,color:{argb:"FF475569"}};
+      ws.getCell(r,c+1).font={bold:true};
+    }
+  }
+
+  ws.mergeCells("A5:H5");
+  ws.getCell("A5").value="Rider setup";
+  ws.getCell("A5").font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
+  ws.getCell("A5").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334155"}};
+
+  ws.getRow(6).values=["Rider","Gear","Tire","Circ. mm","Rollout m","Color","",""];
+  ws.getRow(6).font={bold:true,size:9};
+  ws.getRow(6).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE2E8F0"}};
+
+  let rr=7;
+  state.riders.forEach(n=>{
+    const g=ensureRiderSetup(n);
+    ws.getRow(rr).values=[n,g.chainring+"×"+g.sprocket,g.tire,g.circumferenceMm,Number(rolloutMeters(g).toFixed(3)),"","",""];
+    ws.getCell(rr,6).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+riderColor(n).replace("#","")}};
+    ws.getRow(rr).font={size:9};
+    rr++;
+  });
+
+  const chartStart=rr+1;
+  ws.mergeCells("A"+chartStart+":H"+chartStart);
+  ws.getCell("A"+chartStart).value="Segment speed profile";
+  ws.getCell("A"+chartStart).font={bold:true,size:11};
   const canvas=makeChartCanvas();
   const dataUrl=canvas.toDataURL("image/png");
   const imageId=wb.addImage({base64:dataUrl,extension:"png"});
-  chart.addImage(imageId,{tl:{col:0,row:2},ext:{width:Math.min(1500,Math.max(900,state.laps.length*24)),height:390}});
+  ws.addImage(imageId,{tl:{col:0,row:chartStart},ext:{width:1040,height:300}});
+
+  const tableStart=chartStart+17;
+  const headers=["Split","Dist. m","Seg. s","Total s","Leader / Pull","Speed","Δ Target","Cadence"];
+  ws.getRow(tableStart).values=headers;
+  ws.getRow(tableStart).font={bold:true,color:{argb:"FFFFFFFF"},size:9};
+  ws.getRow(tableStart).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF111827"}};
+  ws.getRow(tableStart).alignment={horizontal:"center",vertical:"middle"};
+
+  state.laps.forEach((x,i)=>{
+    const row=tableStart+1+i;
+    const delta=x.speedKph-target;
+    ws.getRow(row).values=[
+      x.lap,
+      Number(x.cumulativeDistanceM.toFixed(3)),
+      Number((x.lapMs/1000).toFixed(3)),
+      Number((x.totalMs/1000).toFixed(3)),
+      x.leader+" / "+x.pull,
+      Number(x.speedKph.toFixed(2)),
+      Number(delta.toFixed(2)),
+      Number(x.cadenceRpm.toFixed(1))
+    ];
+    ws.getRow(row).font={size:8.5};
+    ws.getCell(row,5).font={bold:true,color:{argb:"FF"+riderColor(x.leader).replace("#","")}};
+    if(delta<0){
+      for(let c=1;c<=8;c++){
+        ws.getCell(row,c).border={
+          top:{style:"thin",color:{argb:"FFD32F2F"}},
+          left:{style:"thin",color:{argb:"FFD32F2F"}},
+          bottom:{style:"thin",color:{argb:"FFD32F2F"}},
+          right:{style:"thin",color:{argb:"FFD32F2F"}}
+        };
+      }
+    }
+  });
+
+  const endRow=tableStart+state.laps.length;
+  ws.pageSetup.printArea="A1:H"+endRow;
+  ws.autoFilter={from:{row:tableStart,column:1},to:{row:endRow,column:8}};
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
