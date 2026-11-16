@@ -16,20 +16,25 @@
 <main class="app">
 <header><h1>Track Cycling Timer</h1><div id="status" class="status">尚未開始</div></header>
 
-<section class="card setup">
-<h2>訓練設定</h2>
-<label>選手名單（每行一位）</label>
-<textarea id="riders" rows="6" placeholder="許仕儒&#10;張誌盛&#10;李靖烽&#10;杜志濠"></textarea>
+<section class="card compact-settings" id="quickSettings">
+<h2>快速設定</h2>
 
-<div class="grid2">
-<label>場地周長
+<details class="compact-details" open>
+<summary>選手與場地</summary>
+<div class="compact-body">
+<label>選手名單（每行一位）
+<textarea id="riders" rows="3" placeholder="許仕儒&#10;張誌盛&#10;李靖烽&#10;杜志濠"></textarea>
+</label>
+
+<div class="compact-grid">
+<label>場地
 <select id="trackLength">
 <option value="250">250 m</option>
 <option value="333.333">333.333 m</option>
 </select>
 </label>
 
-<label>每次 LAP 計時距離
+<label>分段
 <select id="segmentPreset">
 <option value="quarter">1/4 圈</option>
 <option value="half">1/2 圈</option>
@@ -37,20 +42,54 @@
 <option value="custom">自訂</option>
 </select>
 </label>
-</div>
 
-<div class="grid2">
-<label>實際計時距離 (m)
+<label>計時距離 m
 <input id="segmentDistance" type="number" value="62.5" min="1" step="0.001">
 </label>
-<label>目標區段時間 (秒)
+
+<label>目標秒數
 <input id="targetLap" type="number" value="3.70" min="0.1" step="0.01">
 </label>
 </div>
 
-<p id="distanceHint" class="hint">250 m 場地 × 1/4 圈 = 62.500 m</p>
-<label>起跑領騎<select id="startingLeader"></select></label>
-<button id="prepareBtn" class="primary">載入名單 / 齒比設定</button>
+<div id="distanceHint" class="compact-hint">250 m × 1/4 圈 = 62.500 m</div>
+<div class="compact-grid compact-bottom">
+<label>起跑領騎
+<select id="startingLeader"></select>
+</label>
+<button id="prepareBtn" class="primary compact-action">載入名單 / 齒比</button>
+</div>
+</div>
+</details>
+
+<details class="compact-details controller-details">
+<summary>藍牙按鍵 <span id="controllerSummaryState">已配對後可直接設定</span></summary>
+<div class="compact-body">
+<div class="controller-status compact-controller-status"><span>最後輸入</span><strong id="lastControllerInput">尚未偵測</strong></div>
+
+<div class="controller-shell" aria-label="藍牙控制器按鍵配置">
+  <div class="controller-red-row">
+    <button class="learn-control controller-red" data-action="lap" aria-label="設定 LAP">
+      <span>LAP</span><small id="map-lap">未設定</small>
+    </button>
+    <button class="learn-control controller-red" data-action="change" aria-label="設定 CHANGE">
+      <span>CHANGE</span><small id="map-change">未設定</small>
+    </button>
+  </div>
+
+  <div class="controller-dpad">
+    <button class="learn-control dpad-key dpad-up" data-action="startStop"><span>START</span><small id="map-startStop">未設定</small></button>
+    <button class="learn-control dpad-key dpad-left" data-action="undo"><span>UNDO</span><small id="map-undo">未設定</small></button>
+    <div class="dpad-center"></div>
+    <button class="learn-control dpad-key dpad-right" data-action="reset"><span>RESET</span><small id="map-reset">未設定</small></button>
+    <button class="learn-control dpad-key dpad-down" data-action="out"><span>OUT</span><small id="map-out">未設定</small></button>
+  </div>
+</div>
+
+<p id="controllerLearnHint" class="hint controller-hint">點畫面上的虛擬按鍵，再按一次實體控制器上的對應按鍵。</p>
+<button id="clearControllerMap" class="compact-clear">清除按鍵設定</button>
+</div>
+</details>
 </section>
 
 <section class="card" id="gearCard">
@@ -62,24 +101,6 @@
 <tbody id="gearBody"></tbody>
 </table>
 </div>
-</section>
-
-<section class="card" id="controllerCard">
-<h2>藍牙按鍵設定</h2>
-<p class="hint">控制器先在 iPad / iPhone 藍牙設定中配對。建議：左紅鍵＝LAP、右紅鍵＝CHANGE、方向上＝START/STOP、方向下＝OUT；UNDO 建議留給較不易誤觸的方向左／右。按「設定」後，再按一次對應實體按鍵，系統會自動記住。</p>
-<div class="controller-status"><span>連線輸入</span><strong id="lastControllerInput">尚未偵測</strong></div>
-<div class="controller-map-grid">
-  <button class="learn-control" data-action="lap">設定 LAP <small>建議：左紅鍵</small><small id="map-lap">未設定</small></button>
-  <button class="learn-control" data-action="change">設定 CHANGE <small>建議：右紅鍵</small><small id="map-change">未設定</small></button>
-  <button class="learn-control" data-action="startStop">設定 START/STOP <small>建議：方向上</small><small id="map-startStop">未設定</small></button>
-  <button class="learn-control" data-action="out">設定 OUT <small>建議：方向下</small><small id="map-out">未設定</small></button>
-  <button class="learn-control" data-action="undo">設定 UNDO <small>建議：方向左</small><small id="map-undo">未設定</small></button>
-  <button class="learn-control" data-action="reset">設定 RESET <small>建議：方向右</small><small id="map-reset">未設定</small></button>
-</div>
-<div class="controller-actions">
-  <button id="clearControllerMap">清除按鍵設定</button>
-</div>
-<p id="controllerLearnHint" class="hint">尚未進入按鍵學習模式。</p>
 </section>
 
 <section class="card timer">
