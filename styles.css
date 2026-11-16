@@ -163,3 +163,62 @@ button:active{transform:scale(.99)}button.primary{background:#2563eb}button.acce
   .learn-control.controller-red{width:100px;height:60px}
   .controller-dpad{width:180px;height:180px;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px}
 }
+
+/* iPad / desktop width utilization */
+@media(min-width:900px){
+  .app{max-width:1420px;padding-left:20px;padding-right:20px}
+  .settings-columns{
+    display:grid;
+    grid-template-columns:minmax(0,1.35fr) minmax(360px,.85fr);
+    gap:16px;
+    align-items:start
+  }
+  .settings-columns .compact-details{
+    border:1px solid #26314d;
+    border-radius:14px;
+    padding:0 12px;
+    background:#11182755
+  }
+  .settings-columns .compact-details:first-of-type{border-top:1px solid #26314d}
+  .settings-columns .controller-details{height:100%}
+  .settings-columns .controller-shell{max-width:330px}
+}
+@media(max-width:899px){
+  .settings-columns{display:block}
+}
+
+/* Timer hierarchy: total / current segment / previous full lap */
+.timer-secondary{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:-4px 0 14px
+}
+.time-panel{
+  background:#0f172a;
+  border:1px solid #26314d;
+  border-radius:12px;
+  padding:10px 14px;
+  text-align:center
+}
+.time-panel span{
+  display:block;
+  color:#94a3b8;
+  font-size:12px;
+  margin-bottom:4px
+}
+.time-panel strong{
+  display:block;
+  font-variant-numeric:tabular-nums;
+  font-size:26px;
+  line-height:1.1
+}
+@media(min-width:900px){
+  .timer{display:grid;grid-template-columns:1fr;max-width:none}
+  .timer .clock{font-size:62px;margin-bottom:12px}
+  .timer-secondary{max-width:620px;margin-left:auto;margin-right:auto;width:100%}
+}
+@media(max-width:600px){
+  .timer-secondary{grid-template-columns:1fr 1fr}
+  .time-panel strong{font-size:21px}
+}
