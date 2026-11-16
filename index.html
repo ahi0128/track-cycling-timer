@@ -66,14 +66,14 @@
 
 <section class="card" id="controllerCard">
 <h2>藍牙按鍵設定</h2>
-<p class="hint">控制器已先在 iPad / iPhone 藍牙設定中配對即可。按「設定」後，再按一次實體按鍵；系統會自動記住該鍵。</p>
+<p class="hint">控制器先在 iPad / iPhone 藍牙設定中配對。建議：左紅鍵＝LAP、右紅鍵＝CHANGE、方向上＝START/STOP、方向下＝OUT；UNDO 建議留給較不易誤觸的方向左／右。按「設定」後，再按一次對應實體按鍵，系統會自動記住。</p>
 <div class="controller-status"><span>連線輸入</span><strong id="lastControllerInput">尚未偵測</strong></div>
 <div class="controller-map-grid">
-  <button class="learn-control" data-action="lap">設定 LAP <small id="map-lap">未設定</small></button>
-  <button class="learn-control" data-action="change">設定 CHANGE <small id="map-change">未設定</small></button>
-  <button class="learn-control" data-action="startStop">設定 START/STOP <small id="map-startStop">未設定</small></button>
-  <button class="learn-control" data-action="out">設定 OUT <small id="map-out">未設定</small></button>
-  <button class="learn-control" data-action="undo">設定 UNDO <small id="map-undo">未設定</small></button>
+  <button class="learn-control" data-action="lap">設定 LAP <small>建議：左紅鍵</small><small id="map-lap">未設定</small></button>
+  <button class="learn-control" data-action="change">設定 CHANGE <small>建議：右紅鍵</small><small id="map-change">未設定</small></button>
+  <button class="learn-control" data-action="startStop">設定 START/STOP <small>建議：方向上</small><small id="map-startStop">未設定</small></button>
+  <button class="learn-control" data-action="out">設定 OUT <small>建議：方向下</small><small id="map-out">未設定</small></button>
+  <button class="learn-control" data-action="undo">設定 UNDO <small>建議：方向左／右</small><small id="map-undo">未設定</small></button>
 </div>
 <div class="controller-actions">
   <button id="clearControllerMap">清除按鍵設定</button>
