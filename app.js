@@ -22,9 +22,19 @@ let state = {
 };
 let raf = null;
 let lapBoardTimer = null;
-let controllerLearnAction=null;
-let controllerMap={};
+let controllerLearnSlot=null;
+let controllerSlots={};
 let gamepadPrev={};
+const CONTROLLER_SLOT_ORDER=["redLeft","redRight","up","left","right","down"];
+const DEFAULT_SLOT_ACTIONS={
+  redLeft:"lap",
+  redRight:"change",
+  up:"startStop",
+  left:"undo",
+  right:"reset",
+  down:"out"
+};
+const ACTION_OPTIONS=["lap","change","startStop","undo","reset","out"];
 const CONTROLLER_ACTIONS={
   lap:"lapBtn",
   change:"changeBtn",
@@ -366,14 +376,14 @@ function render(){
   $("lastSpeed").textContent = last ? last.speedKph.toFixed(1)+" km/h" : "—";
   $("lastCadence").textContent = last ? last.cadenceRpm.toFixed(1)+" rpm" : "—";
   $("delta").textContent = last ? (last.delta>=0?"+":"") + last.delta.toFixed(2)+"s" : "—";
+  renderTimerController();
   const fullForTimer=buildFullLaps();
   const previousFull=fullForTimer.at(-1);
   const previousFullEl=$("previousFullLap");
   if(previousFullEl) previousFullEl.textContent=previousFull?lapFmt(previousFull.lapMs)+" s":"—";
   const currentFullEl=$("currentFullLapClock");
   if(currentFullEl) currentFullEl.textContent=(currentFullLapElapsed(currentElapsed())/1000).toFixed(3);
-  const startStopLabel=$("startStopBtn").querySelector("span");
-  if(startStopLabel) startStopLabel.textContent=state.running ? "STOP" : "START";
+  renderTimerController();
   $("status").textContent = state.running ? "計時中" : (state.elapsed>0 ? "已暫停" : "尚未開始");
   $("lapsBody").innerHTML = state.laps.map(x =>
     '<tr><td>'+x.lap+'</td><td>'+x.cumulativeDistanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+x.distanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
@@ -806,70 +816,128 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
   a.click();
   URL.revokeObjectURL(a.href);
 });
+function actionDisplay(action){
+  if(action==="startStop") return state.running?"STOP":"START";
+  return CONTROLLER_LABELS[action]||"未指定";
+}
+function actionSelectText(action){
+  return action==="startStop"?"START/STOP":(CONTROLLER_LABELS[action]||action);
+}
+function migrateOldControllerMap(){
+  let old={};
+  try{ old=JSON.parse(localStorage.getItem("trackCyclingControllerMap")||"{}"); }catch(e){}
+  const migrated={};
+  for(const slot of CONTROLLER_SLOT_ORDER){
+    const action=DEFAULT_SLOT_ACTIONS[slot];
+    migrated[slot]={action,signature:old[action]?.signature||"",label:old[action]?.label||""};
+  }
+  return migrated;
+}
 function loadControllerMap(){
-  try{ controllerMap=JSON.parse(localStorage.getItem("trackCyclingControllerMap")||"{}"); }
-  catch(e){ controllerMap={}; }
+  try{ controllerSlots=JSON.parse(localStorage.getItem("trackCyclingControllerSlots")||"null")||migrateOldControllerMap(); }
+  catch(e){ controllerSlots=migrateOldControllerMap(); }
+  for(const slot of CONTROLLER_SLOT_ORDER){
+    if(!controllerSlots[slot]) controllerSlots[slot]={action:DEFAULT_SLOT_ACTIONS[slot],signature:"",label:""};
+    if(!controllerSlots[slot].action) controllerSlots[slot].action=DEFAULT_SLOT_ACTIONS[slot];
+  }
 }
 function saveControllerMap(){
-  localStorage.setItem("trackCyclingControllerMap",JSON.stringify(controllerMap));
+  localStorage.setItem("trackCyclingControllerSlots",JSON.stringify(controllerSlots));
+}
+function renderTimerController(){
+  CONTROLLER_SLOT_ORDER.forEach(slot=>{
+    const action=controllerSlots[slot]?.action||DEFAULT_SLOT_ACTIONS[slot];
+    const el=document.querySelector('[data-timer-label="'+slot+'"]');
+    if(el) el.textContent=actionDisplay(action);
+  });
 }
 function renderControllerMap(){
-  Object.keys(CONTROLLER_ACTIONS).forEach(action=>{
-    const el=$("map-"+action);
-    if(el) el.textContent=controllerMap[action]?.label||"未設定";
+  CONTROLLER_SLOT_ORDER.forEach(slot=>{
+    const slotData=controllerSlots[slot]||{action:DEFAULT_SLOT_ACTIONS[slot],signature:"",label:""};
+    const setupLabel=document.querySelector('[data-slot-label="'+slot+'"]');
+    const sig=document.querySelector('[data-slot-sig="'+slot+'"]');
+    if(setupLabel) setupLabel.textContent=actionSelectText(slotData.action);
+    if(sig) sig.textContent=slotData.label||"未設定";
+    const sel=document.querySelector('.slot-action-select[data-slot="'+slot+'"]');
+    if(sel){
+      if(!sel.options.length){
+        sel.innerHTML=ACTION_OPTIONS.map(a=>'<option value="'+a+'">'+actionSelectText(a)+'</option>').join("");
+      }
+      sel.value=slotData.action;
+    }
   });
-  document.querySelectorAll(".learn-control").forEach(btn=>{
-    btn.classList.toggle("learning",btn.dataset.action===controllerLearnAction);
+  document.querySelectorAll(".slot-learn").forEach(btn=>{
+    btn.classList.toggle("learning",btn.dataset.slot===controllerLearnSlot);
   });
   const summary=$("controllerSummaryState");
   if(summary){
-    const mapped=Object.keys(CONTROLLER_ACTIONS).filter(a=>controllerMap[a]?.signature).length;
-    summary.textContent=mapped+"/"+Object.keys(CONTROLLER_ACTIONS).length+" 已設定";
+    const mapped=CONTROLLER_SLOT_ORDER.filter(s=>controllerSlots[s]?.signature).length;
+    summary.textContent=mapped+"/6 已設定";
   }
+  renderTimerController();
+}
+function executeAction(action){
+  const targetId=CONTROLLER_ACTIONS[action];
+  const target=targetId?$(targetId):null;
+  if(target && !target.disabled){ target.click(); return true; }
+  return false;
 }
 function controllerInput(signature,label){
   const monitor=$("lastControllerInput");
   if(monitor) monitor.textContent=label;
-  if(controllerLearnAction){
-    controllerMap[controllerLearnAction]={signature,label};
+  if(controllerLearnSlot){
+    controllerSlots[controllerLearnSlot].signature=signature;
+    controllerSlots[controllerLearnSlot].label=label;
     saveControllerMap();
-    const learned=CONTROLLER_LABELS[controllerLearnAction];
-    controllerLearnAction=null;
+    const learnedSlot=controllerLearnSlot;
+    controllerLearnSlot=null;
     const hint=$("controllerLearnHint");
-    if(hint) hint.textContent="已設定 "+learned+"。可以繼續設定其他按鍵。";
+    if(hint) hint.textContent="已記住 "+learnedSlot+" 的實體按鍵，可繼續設定其他位置。";
     renderControllerMap();
     return true;
   }
-  const action=Object.keys(controllerMap).find(a=>controllerMap[a]?.signature===signature);
-  if(!action) return false;
-  const target=$(CONTROLLER_ACTIONS[action]);
-  if(target && !target.disabled){
-    target.click();
-    return true;
-  }
-  return false;
+  const slot=CONTROLLER_SLOT_ORDER.find(s=>controllerSlots[s]?.signature===signature);
+  if(!slot) return false;
+  return executeAction(controllerSlots[slot].action);
 }
-document.querySelectorAll(".learn-control").forEach(btn=>{
+document.querySelectorAll(".slot-learn").forEach(btn=>{
   btn.addEventListener("click",()=>{
-    controllerLearnAction=btn.dataset.action;
+    controllerLearnSlot=btn.dataset.slot;
     const hint=$("controllerLearnHint");
-    if(hint) hint.textContent="請現在按下要用作 "+CONTROLLER_LABELS[controllerLearnAction]+" 的實體按鍵…";
+    if(hint) hint.textContent="請現在按下實體控制器的這一顆按鍵…";
     renderControllerMap();
   });
 });
+document.querySelectorAll(".slot-action-select").forEach(sel=>{
+  sel.addEventListener("change",()=>{
+    const slot=sel.dataset.slot;
+    controllerSlots[slot].action=sel.value;
+    saveControllerMap();
+    renderControllerMap();
+  });
+});
+document.querySelectorAll(".timer-slot-button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const slot=btn.dataset.timerSlot;
+    executeAction(controllerSlots[slot]?.action||DEFAULT_SLOT_ACTIONS[slot]);
+  });
+});
 $("clearControllerMap")?.addEventListener("click",()=>{
-  controllerMap={};
-  controllerLearnAction=null;
+  controllerSlots={};
+  for(const slot of CONTROLLER_SLOT_ORDER){
+    controllerSlots[slot]={action:DEFAULT_SLOT_ACTIONS[slot],signature:"",label:""};
+  }
+  controllerLearnSlot=null;
   saveControllerMap();
   renderControllerMap();
-  $("controllerLearnHint").textContent="按鍵設定已清除。";
+  $("controllerLearnHint").textContent="按鍵設定已清除；功能位置已恢復預設。";
 });
 document.addEventListener("keydown",e=>{
   if(e.repeat) return;
   const signature="key:"+e.code;
   const label=(e.code||"Key")+" · "+(e.key||"");
   const inForm=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
-  if(controllerLearnAction){
+  if(controllerLearnSlot){
     e.preventDefault();
     controllerInput(signature,label);
     return;
