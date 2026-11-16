@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const TIRE_PRESETS = {
+  "700x22C": 2092,
   "700x23C": 2096,
   "700x25C": 2105,
   "700x28C": 2136,
@@ -796,6 +797,11 @@ function renderControllerMap(){
   document.querySelectorAll(".learn-control").forEach(btn=>{
     btn.classList.toggle("learning",btn.dataset.action===controllerLearnAction);
   });
+  const summary=$("controllerSummaryState");
+  if(summary){
+    const mapped=Object.keys(CONTROLLER_ACTIONS).filter(a=>controllerMap[a]?.signature).length;
+    summary.textContent=mapped+"/"+Object.keys(CONTROLLER_ACTIONS).length+" 已設定";
+  }
 }
 function controllerInput(signature,label){
   const monitor=$("lastControllerInput");
