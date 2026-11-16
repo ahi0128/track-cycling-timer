@@ -1,4 +1,4 @@
-const CACHE="track-cycling-timer-v18";
+const CACHE="track-cycling-timer-v19";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./manifest.webmanifest"];
 
 self.addEventListener("install",event=>{
