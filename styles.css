@@ -86,3 +86,12 @@ button:active{transform:scale(.99)}button.primary{background:#2563eb}button.acce
 .continuous-bar.under-target{box-shadow:0 0 0 2px #ef4444}
 .target-speed-line{stroke:#f8fafc;stroke-width:1.5;stroke-dasharray:7 5}
 .target-speed-label{fill:#f8fafc;font-size:11px;font-weight:700}
+
+.controller-status{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0f172a;border:1px solid #26314d;border-radius:12px;padding:12px;margin:10px 0}
+.controller-status span{font-size:12px;color:#94a3b8}.controller-status strong{font-size:14px;text-align:right;word-break:break-all}
+.controller-map-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.learn-control{min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.learn-control small{font-size:11px;color:#cbd5e1;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.learn-control.learning{outline:3px solid #facc15;background:#713f12}
+.controller-actions{margin-top:8px}
+@media(max-width:600px){.controller-map-grid{grid-template-columns:1fr 1fr}.learn-control{font-size:16px}}
