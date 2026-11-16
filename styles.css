@@ -303,3 +303,62 @@ button:active{transform:scale(.99)}button.primary{background:#2563eb}button.acce
   .timer-red-button{width:120px;height:78px}
   .timer-dpad{width:210px;height:210px;grid-template-columns:70px 70px 70px;grid-template-rows:70px 70px 70px}
 }
+
+/* v22: fixed side-by-side quick settings on iPad landscape */
+.settings-columns-fixed{
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(420px,.75fr);
+  gap:14px;
+  align-items:stretch
+}
+.settings-panel{
+  border:1px solid #26314d;
+  border-radius:14px;
+  padding:12px;
+  background:#11182755;
+  min-width:0
+}
+.settings-panel-title{
+  display:flex;justify-content:space-between;align-items:center;
+  font-weight:800;font-size:16px;margin-bottom:7px
+}
+.settings-panel-title small{color:#94a3b8;font-size:11px;font-weight:500}
+.slot-action-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px
+}
+.slot-action-grid label{font-size:10px;margin:0}
+.slot-action-grid select{font-size:11px;padding:5px;margin-top:2px}
+.controller-shell-setup{max-width:320px}
+.slot-learn{cursor:pointer}
+.action-proxies{display:none!important}
+
+/* v22: stopwatch controller must keep physical geometry */
+.timer-controller-shell{display:block!important}
+.timer-red-row{display:flex!important;justify-content:center!important;gap:24px!important}
+.timer-red-button{display:flex!important;width:150px!important;height:92px!important;flex:0 0 150px!important}
+.timer-dpad{
+  display:grid!important;
+  width:270px!important;height:270px!important;
+  grid-template-columns:90px 90px 90px!important;
+  grid-template-rows:90px 90px 90px!important;
+  grid-template-areas:". up ." "left center right" ". down ."!important;
+}
+.timer-dpad-key{display:flex!important;width:90px!important;height:90px!important;margin:0!important}
+.timer-up{grid-area:up!important}.timer-left{grid-area:left!important}.timer-right{grid-area:right!important}.timer-down{grid-area:down!important}
+.timer-dpad-center{grid-area:center!important;width:90px;height:90px}
+.timer-slot-button{touch-action:manipulation}
+
+/* Use iPad landscape width instead of leaving a blank right side */
+@media(min-width:900px){
+  .app{max-width:1480px!important}
+  #quickSettings,.timer-console,#gearCard{width:100%}
+}
+@media(max-width:1050px){
+  .settings-columns-fixed{grid-template-columns:1fr}
+}
+@media(max-width:899px){
+  .timer-red-button{width:130px!important;height:80px!important;flex-basis:130px!important}
+  .timer-dpad{width:210px!important;height:210px!important;grid-template-columns:70px 70px 70px!important;grid-template-rows:70px 70px 70px!important}
+  .timer-dpad-key{width:70px!important;height:70px!important}
+  .timer-dpad-center{width:70px;height:70px}
+}
