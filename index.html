@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111827">
   <title>Track Cycling Timer</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=22">
+  <link rel="stylesheet" href="./styles.css?v=23">
 </head>
 <body>
 <div id="lapBoard" class="lap-board" aria-live="assertive" aria-hidden="true">
@@ -97,11 +97,9 @@
     <p id="controllerLearnHint" class="hint controller-hint">點上方實體位置，再按一次手上的同一顆按鍵完成學習；下方可更換該位置的功能。</p>
     <button id="clearControllerMap" class="compact-clear">清除按鍵設定</button>
   </div>
-</div>
-</section>
 
-<section class="card" id="gearCard">
-<h2>選手齒比與輪胎</h2>
+  <div class="settings-panel gear-settings-panel" id="gearCard">
+    <h2>選手齒比與輪胎</h2>
 <p class="hint">輪周預設值為估算；若要提高踏頻計算精度，可輸入實測輪周（mm）。</p>
 <div class="table-wrap">
 <table>
@@ -109,7 +107,11 @@
 <tbody id="gearBody"></tbody>
 </table>
 </div>
+  </div>
+</div>
 </section>
+
+
 
 <section class="card timer timer-console">
 <div class="timer-top">
@@ -206,6 +208,6 @@
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="./app.js?v=22"></script>
+<script src="./app.js?v=23"></script>
 </body>
 </html>
