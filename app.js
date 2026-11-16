@@ -56,7 +56,11 @@ function save(){
 }
 function currentElapsed(){ return state.running ? state.elapsed + (now() - state.startAt) : state.elapsed; }
 function refreshClock(){
-  $("clock").textContent = fmt(currentElapsed());
+  const total=currentElapsed();
+  $("clock").textContent = fmt(total);
+  const seg=Math.max(0,total-state.lastLapAt);
+  const segEl=$("segmentClock");
+  if(segEl) segEl.textContent=(seg/1000).toFixed(3);
   if(state.running) raf = requestAnimationFrame(refreshClock);
 }
 const RIDER_COLORS=["#00E5FF","#FFEA00","#FF3D71","#7CFF00","#FF8A00","#B388FF","#00FFA8","#FF5CC8"];
@@ -352,6 +356,10 @@ function render(){
   $("lastSpeed").textContent = last ? last.speedKph.toFixed(1)+" km/h" : "—";
   $("lastCadence").textContent = last ? last.cadenceRpm.toFixed(1)+" rpm" : "—";
   $("delta").textContent = last ? (last.delta>=0?"+":"") + last.delta.toFixed(2)+"s" : "—";
+  const fullForTimer=buildFullLaps();
+  const previousFull=fullForTimer.at(-1);
+  const previousFullEl=$("previousFullLap");
+  if(previousFullEl) previousFullEl.textContent=previousFull?lapFmt(previousFull.lapMs)+" s":"—";
   $("startStopBtn").textContent = state.running ? "STOP" : "START";
   $("status").textContent = state.running ? "計時中" : (state.elapsed>0 ? "已暫停" : "尚未開始");
   $("lapsBody").innerHTML = state.laps.map(x =>
@@ -477,6 +485,8 @@ $("resetBtn").addEventListener("click",()=>{
   clearTimeout(lapBoardTimer); hideFullLapBoard();
   render();
   $("clock").textContent="00:00.000";
+  if($("segmentClock")) $("segmentClock").textContent="0.000";
+  if($("previousFullLap")) $("previousFullLap").textContent="—";
   save();
 });
 function sessionSummaryRows(){
