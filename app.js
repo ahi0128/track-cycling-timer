@@ -29,14 +29,16 @@ const CONTROLLER_ACTIONS={
   change:"changeBtn",
   startStop:"startStopBtn",
   out:"outBtnTop",
-  undo:"undoBtn"
+  undo:"undoBtn",
+  reset:"resetBtn"
 };
 const CONTROLLER_LABELS={
   lap:"LAP",
   change:"CHANGE",
   startStop:"START/STOP",
   out:"OUT",
-  undo:"UNDO"
+  undo:"UNDO",
+  reset:"RESET"
 };
 
 function now(){ return performance.now(); }
