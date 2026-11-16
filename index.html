@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111827">
   <title>Track Cycling Timer</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=22">
 </head>
 <body>
 <div id="lapBoard" class="lap-board" aria-live="assertive" aria-hidden="true">
@@ -18,79 +18,85 @@
 
 <section class="card compact-settings" id="quickSettings">
 <h2>快速設定</h2>
-<div class="settings-columns">
+<div class="settings-columns-fixed">
 
-<details class="compact-details" open>
-<summary>選手與場地</summary>
-<div class="compact-body">
-<label>選手名單（每行一位）
-<textarea id="riders" rows="3" placeholder="許仕儒&#10;張誌盛&#10;李靖烽&#10;杜志濠"></textarea>
-</label>
+  <div class="settings-panel rider-settings-panel">
+    <div class="settings-panel-title">選手與場地</div>
+    <label>選手名單（每行一位）
+      <textarea id="riders" rows="3" placeholder="許仕儒&#10;張誌盛&#10;李靖烽&#10;杜志濠"></textarea>
+    </label>
 
-<div class="compact-grid">
-<label>場地
-<select id="trackLength">
-<option value="250">250 m</option>
-<option value="333.333">333.333 m</option>
-</select>
-</label>
+    <div class="compact-grid">
+      <label>場地
+        <select id="trackLength">
+          <option value="250">250 m</option>
+          <option value="333.333">333.333 m</option>
+        </select>
+      </label>
+      <label>分段
+        <select id="segmentPreset">
+          <option value="quarter">1/4 圈</option>
+          <option value="half">1/2 圈</option>
+          <option value="full">1 圈</option>
+          <option value="custom">自訂</option>
+        </select>
+      </label>
+      <label>計時距離 m
+        <input id="segmentDistance" type="number" value="62.5" min="1" step="0.001">
+      </label>
+      <label>目標秒數
+        <input id="targetLap" type="number" value="3.70" min="0.1" step="0.01">
+      </label>
+    </div>
 
-<label>分段
-<select id="segmentPreset">
-<option value="quarter">1/4 圈</option>
-<option value="half">1/2 圈</option>
-<option value="full">1 圈</option>
-<option value="custom">自訂</option>
-</select>
-</label>
-
-<label>計時距離 m
-<input id="segmentDistance" type="number" value="62.5" min="1" step="0.001">
-</label>
-
-<label>目標秒數
-<input id="targetLap" type="number" value="3.70" min="0.1" step="0.01">
-</label>
-</div>
-
-<div id="distanceHint" class="compact-hint">250 m × 1/4 圈 = 62.500 m</div>
-<div class="compact-grid compact-bottom">
-<label>起跑領騎
-<select id="startingLeader"></select>
-</label>
-<button id="prepareBtn" class="primary compact-action">載入名單 / 齒比</button>
-</div>
-</div>
-</details>
-
-<details class="compact-details controller-details">
-<summary>藍牙按鍵 <span id="controllerSummaryState">已配對後可直接設定</span></summary>
-<div class="compact-body">
-<div class="controller-status compact-controller-status"><span>最後輸入</span><strong id="lastControllerInput">尚未偵測</strong></div>
-
-<div class="controller-shell" aria-label="藍牙控制器按鍵配置">
-  <div class="controller-red-row">
-    <button class="learn-control controller-red" data-action="lap" aria-label="設定 LAP">
-      <span>LAP</span><small id="map-lap">未設定</small>
-    </button>
-    <button class="learn-control controller-red" data-action="change" aria-label="設定 CHANGE">
-      <span>CHANGE</span><small id="map-change">未設定</small>
-    </button>
+    <div id="distanceHint" class="compact-hint">250 m × 1/4 圈 = 62.500 m</div>
+    <div class="compact-grid compact-bottom">
+      <label>起跑領騎<select id="startingLeader"></select></label>
+      <button id="prepareBtn" class="primary compact-action">載入名單 / 齒比</button>
+    </div>
   </div>
 
-  <div class="controller-dpad">
-    <button class="learn-control dpad-key dpad-up" data-action="startStop"><span>START</span><small id="map-startStop">未設定</small></button>
-    <button class="learn-control dpad-key dpad-left" data-action="undo"><span>UNDO</span><small id="map-undo">未設定</small></button>
-    <div class="dpad-center"></div>
-    <button class="learn-control dpad-key dpad-right" data-action="reset"><span>RESET</span><small id="map-reset">未設定</small></button>
-    <button class="learn-control dpad-key dpad-down" data-action="out"><span>OUT</span><small id="map-out">未設定</small></button>
-  </div>
-</div>
+  <div class="settings-panel controller-settings-panel">
+    <div class="settings-panel-title">
+      <span>藍牙按鍵</span>
+      <small id="controllerSummaryState">0/6 已設定</small>
+    </div>
+    <div class="controller-status compact-controller-status">
+      <span>最後輸入</span><strong id="lastControllerInput">尚未偵測</strong>
+    </div>
 
-<p id="controllerLearnHint" class="hint controller-hint">點畫面上的虛擬按鍵，再按一次實體控制器上的對應按鍵。</p>
-<button id="clearControllerMap" class="compact-clear">清除按鍵設定</button>
-</div>
-</details>
+    <div class="controller-shell controller-shell-setup" aria-label="藍牙控制器實體位置">
+      <div class="controller-red-row">
+        <button class="slot-learn controller-red" data-slot="redLeft">
+          <span class="slot-action-text" data-slot-label="redLeft">LAP</span>
+          <small data-slot-sig="redLeft">未設定</small>
+        </button>
+        <button class="slot-learn controller-red" data-slot="redRight">
+          <span class="slot-action-text" data-slot-label="redRight">CHANGE</span>
+          <small data-slot-sig="redRight">未設定</small>
+        </button>
+      </div>
+      <div class="controller-dpad">
+        <button class="slot-learn dpad-key dpad-up" data-slot="up"><span data-slot-label="up">START/STOP</span><small data-slot-sig="up">未設定</small></button>
+        <button class="slot-learn dpad-key dpad-left" data-slot="left"><span data-slot-label="left">UNDO</span><small data-slot-sig="left">未設定</small></button>
+        <div class="dpad-center"></div>
+        <button class="slot-learn dpad-key dpad-right" data-slot="right"><span data-slot-label="right">RESET</span><small data-slot-sig="right">未設定</small></button>
+        <button class="slot-learn dpad-key dpad-down" data-slot="down"><span data-slot-label="down">OUT</span><small data-slot-sig="down">未設定</small></button>
+      </div>
+    </div>
+
+    <div class="slot-action-grid">
+      <label>左紅<select class="slot-action-select" data-slot="redLeft"></select></label>
+      <label>右紅<select class="slot-action-select" data-slot="redRight"></select></label>
+      <label>上<select class="slot-action-select" data-slot="up"></select></label>
+      <label>左<select class="slot-action-select" data-slot="left"></select></label>
+      <label>右<select class="slot-action-select" data-slot="right"></select></label>
+      <label>下<select class="slot-action-select" data-slot="down"></select></label>
+    </div>
+
+    <p id="controllerLearnHint" class="hint controller-hint">點上方實體位置，再按一次手上的同一顆按鍵完成學習；下方可更換該位置的功能。</p>
+    <button id="clearControllerMap" class="compact-clear">清除按鍵設定</button>
+  </div>
 </div>
 </section>
 
@@ -109,46 +115,30 @@
 <div class="timer-top">
   <div class="leader-label">目前領騎</div>
   <div id="leader" class="leader">—</div>
-
   <div class="time-dashboard">
-    <div class="time-main-panel">
-      <span>總時間</span>
-      <strong id="clock">00:00.000</strong>
-    </div>
-    <div class="time-mini-panel">
-      <span>進行中完整圈</span>
-      <strong id="currentFullLapClock">0.000</strong>
-    </div>
-    <div class="time-mini-panel">
-      <span>目前分段</span>
-      <strong id="segmentClock">0.000</strong>
-    </div>
-    <div class="time-mini-panel">
-      <span>上一完整圈</span>
-      <strong id="previousFullLap">—</strong>
-    </div>
+    <div class="time-main-panel"><span>總時間</span><strong id="clock">00:00.000</strong></div>
+    <div class="time-mini-panel"><span>進行中完整圈</span><strong id="currentFullLapClock">0.000</strong></div>
+    <div class="time-mini-panel"><span>目前分段</span><strong id="segmentClock">0.000</strong></div>
+    <div class="time-mini-panel"><span>上一完整圈</span><strong id="previousFullLap">—</strong></div>
   </div>
 </div>
 
 <div class="timer-workspace">
-  <div class="timer-controller-shell" aria-label="碼錶實體按鍵配置">
+  <div class="timer-controller-shell" aria-label="碼錶虛擬控制器">
     <div class="timer-red-row">
-      <button id="lapBtn" class="timer-red-button timer-lap">
-        <span class="round-red"></span>
-        <strong>LAP</strong>
+      <button class="timer-slot-button timer-red-button" data-timer-slot="redLeft">
+        <span class="round-red"></span><strong data-timer-label="redLeft">LAP</strong>
       </button>
-      <button id="changeBtn" class="timer-red-button timer-change">
-        <span class="round-red"></span>
-        <strong>CHANGE</strong>
+      <button class="timer-slot-button timer-red-button" data-timer-slot="redRight">
+        <span class="round-red"></span><strong data-timer-label="redRight">CHANGE</strong>
       </button>
     </div>
-
     <div class="timer-dpad">
-      <button id="startStopBtn" class="timer-dpad-key timer-up"><span>START</span></button>
-      <button id="undoBtn" class="timer-dpad-key timer-left"><span>UNDO</span></button>
+      <button class="timer-slot-button timer-dpad-key timer-up" data-timer-slot="up"><span data-timer-label="up">START</span></button>
+      <button class="timer-slot-button timer-dpad-key timer-left" data-timer-slot="left"><span data-timer-label="left">UNDO</span></button>
       <div class="timer-dpad-center"></div>
-      <button id="resetBtn" class="timer-dpad-key timer-right"><span>RESET</span></button>
-      <button id="outBtnTop" class="timer-dpad-key timer-down danger-dpad"><span>OUT</span></button>
+      <button class="timer-slot-button timer-dpad-key timer-right" data-timer-slot="right"><span data-timer-label="right">RESET</span></button>
+      <button class="timer-slot-button timer-dpad-key timer-down" data-timer-slot="down"><span data-timer-label="down">OUT</span></button>
     </div>
   </div>
 
@@ -158,6 +148,15 @@
     <button id="setLeaderBtn">指定領騎</button>
     <div id="rotationRoster" class="rotation-roster"></div>
   </div>
+</div>
+
+<div class="action-proxies" aria-hidden="true">
+  <button id="lapBtn" type="button"></button>
+  <button id="changeBtn" type="button"></button>
+  <button id="startStopBtn" type="button"></button>
+  <button id="undoBtn" type="button"></button>
+  <button id="resetBtn" type="button"></button>
+  <button id="outBtnTop" type="button"></button>
 </div>
 </section>
 
@@ -207,6 +206,6 @@
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="./app.js"></script>
+<script src="./app.js?v=22"></script>
 </body>
 </html>
