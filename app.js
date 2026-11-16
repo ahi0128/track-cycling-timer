@@ -55,12 +55,22 @@ function save(){
   localStorage.setItem("trackCyclingTimer", JSON.stringify({...state, running:false, startAt:0}));
 }
 function currentElapsed(){ return state.running ? state.elapsed + (now() - state.startAt) : state.elapsed; }
+function currentFullLapElapsed(totalMs){
+  const perLap=segmentsPerFullLap();
+  if(!perLap) return 0;
+  const completedFullLapSegments=Math.floor(state.laps.length/perLap)*perLap;
+  if(completedFullLapSegments<=0) return totalMs;
+  const boundary=state.laps[completedFullLapSegments-1]?.totalMs||0;
+  return Math.max(0,totalMs-boundary);
+}
 function refreshClock(){
   const total=currentElapsed();
   $("clock").textContent = fmt(total);
   const seg=Math.max(0,total-state.lastLapAt);
   const segEl=$("segmentClock");
   if(segEl) segEl.textContent=(seg/1000).toFixed(3);
+  const fullNow=$("currentFullLapClock");
+  if(fullNow) fullNow.textContent=(currentFullLapElapsed(total)/1000).toFixed(3);
   if(state.running) raf = requestAnimationFrame(refreshClock);
 }
 const RIDER_COLORS=["#00E5FF","#FFEA00","#FF3D71","#7CFF00","#FF8A00","#B388FF","#00FFA8","#FF5CC8"];
@@ -360,7 +370,10 @@ function render(){
   const previousFull=fullForTimer.at(-1);
   const previousFullEl=$("previousFullLap");
   if(previousFullEl) previousFullEl.textContent=previousFull?lapFmt(previousFull.lapMs)+" s":"—";
-  $("startStopBtn").textContent = state.running ? "STOP" : "START";
+  const currentFullEl=$("currentFullLapClock");
+  if(currentFullEl) currentFullEl.textContent=(currentFullLapElapsed(currentElapsed())/1000).toFixed(3);
+  const startStopLabel=$("startStopBtn").querySelector("span");
+  if(startStopLabel) startStopLabel.textContent=state.running ? "STOP" : "START";
   $("status").textContent = state.running ? "計時中" : (state.elapsed>0 ? "已暫停" : "尚未開始");
   $("lapsBody").innerHTML = state.laps.map(x =>
     '<tr><td>'+x.lap+'</td><td>'+x.cumulativeDistanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+x.distanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
@@ -486,6 +499,7 @@ $("resetBtn").addEventListener("click",()=>{
   render();
   $("clock").textContent="00:00.000";
   if($("segmentClock")) $("segmentClock").textContent="0.000";
+  if($("currentFullLapClock")) $("currentFullLapClock").textContent="0.000";
   if($("previousFullLap")) $("previousFullLap").textContent="—";
   save();
 });
