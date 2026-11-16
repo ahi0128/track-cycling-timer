@@ -18,6 +18,7 @@
 
 <section class="card compact-settings" id="quickSettings">
 <h2>快速設定</h2>
+<div class="settings-columns">
 
 <details class="compact-details" open>
 <summary>選手與場地</summary>
@@ -90,6 +91,7 @@
 <button id="clearControllerMap" class="compact-clear">清除按鍵設定</button>
 </div>
 </details>
+</div>
 </section>
 
 <section class="card" id="gearCard">
@@ -107,6 +109,16 @@
 <div class="leader-label">目前領騎</div>
 <div id="leader" class="leader">—</div>
 <div id="clock" class="clock">00:00.000</div>
+<div class="timer-secondary">
+  <div class="time-panel">
+    <span>目前分段</span>
+    <strong id="segmentClock">0.000</strong>
+  </div>
+  <div class="time-panel">
+    <span>上一完整圈</span>
+    <strong id="previousFullLap">—</strong>
+  </div>
+</div>
 <div class="grid2"><button id="startStopBtn" class="primary big">START</button><button id="lapBtn" class="big">LAP</button></div>
 <div class="grid2"><button id="changeBtn" class="accent big">CHANGE</button><button id="outBtnTop" class="danger big">目前選手 OUT</button></div>
 <div class="rotation-panel">
