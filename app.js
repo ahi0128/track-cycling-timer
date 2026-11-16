@@ -21,6 +21,23 @@ let state = {
 };
 let raf = null;
 let lapBoardTimer = null;
+let controllerLearnAction=null;
+let controllerMap={};
+let gamepadPrev={};
+const CONTROLLER_ACTIONS={
+  lap:"lapBtn",
+  change:"changeBtn",
+  startStop:"startStopBtn",
+  out:"outBtnTop",
+  undo:"undoBtn"
+};
+const CONTROLLER_LABELS={
+  lap:"LAP",
+  change:"CHANGE",
+  startStop:"START/STOP",
+  out:"OUT",
+  undo:"UNDO"
+};
 
 function now(){ return performance.now(); }
 function fmt(ms){
@@ -762,6 +779,97 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
   a.click();
   URL.revokeObjectURL(a.href);
 });
+function loadControllerMap(){
+  try{ controllerMap=JSON.parse(localStorage.getItem("trackCyclingControllerMap")||"{}"); }
+  catch(e){ controllerMap={}; }
+}
+function saveControllerMap(){
+  localStorage.setItem("trackCyclingControllerMap",JSON.stringify(controllerMap));
+}
+function renderControllerMap(){
+  Object.keys(CONTROLLER_ACTIONS).forEach(action=>{
+    const el=$("map-"+action);
+    if(el) el.textContent=controllerMap[action]?.label||"未設定";
+  });
+  document.querySelectorAll(".learn-control").forEach(btn=>{
+    btn.classList.toggle("learning",btn.dataset.action===controllerLearnAction);
+  });
+}
+function controllerInput(signature,label){
+  const monitor=$("lastControllerInput");
+  if(monitor) monitor.textContent=label;
+  if(controllerLearnAction){
+    controllerMap[controllerLearnAction]={signature,label};
+    saveControllerMap();
+    const learned=CONTROLLER_LABELS[controllerLearnAction];
+    controllerLearnAction=null;
+    const hint=$("controllerLearnHint");
+    if(hint) hint.textContent="已設定 "+learned+"。可以繼續設定其他按鍵。";
+    renderControllerMap();
+    return true;
+  }
+  const action=Object.keys(controllerMap).find(a=>controllerMap[a]?.signature===signature);
+  if(!action) return false;
+  const target=$(CONTROLLER_ACTIONS[action]);
+  if(target && !target.disabled){
+    target.click();
+    return true;
+  }
+  return false;
+}
+document.querySelectorAll(".learn-control").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    controllerLearnAction=btn.dataset.action;
+    const hint=$("controllerLearnHint");
+    if(hint) hint.textContent="請現在按下要用作 "+CONTROLLER_LABELS[controllerLearnAction]+" 的實體按鍵…";
+    renderControllerMap();
+  });
+});
+$("clearControllerMap")?.addEventListener("click",()=>{
+  controllerMap={};
+  controllerLearnAction=null;
+  saveControllerMap();
+  renderControllerMap();
+  $("controllerLearnHint").textContent="按鍵設定已清除。";
+});
+document.addEventListener("keydown",e=>{
+  if(e.repeat) return;
+  const signature="key:"+e.code;
+  const label=(e.code||"Key")+" · "+(e.key||"");
+  const inForm=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
+  if(controllerLearnAction){
+    e.preventDefault();
+    controllerInput(signature,label);
+    return;
+  }
+  if(inForm) return;
+  const handled=controllerInput(signature,label);
+  if(handled) e.preventDefault();
+},{capture:true});
+
+function pollGamepads(){
+  const pads=(navigator.getGamepads?navigator.getGamepads():[])||[];
+  for(const gp of pads){
+    if(!gp) continue;
+    gp.buttons.forEach((b,i)=>{
+      const key="gp"+gp.index+"b"+i;
+      const pressed=!!b.pressed;
+      if(pressed && !gamepadPrev[key]){
+        controllerInput("gamepad:button:"+i,"Gamepad B"+i);
+      }
+      gamepadPrev[key]=pressed;
+    });
+  }
+  requestAnimationFrame(pollGamepads);
+}
+window.addEventListener("gamepadconnected",e=>{
+  const monitor=$("lastControllerInput");
+  if(monitor) monitor.textContent="Gamepad connected: "+(e.gamepad.id||"controller");
+});
+loadControllerMap();
+renderControllerMap();
+requestAnimationFrame(pollGamepads);
+
 window.addEventListener("beforeunload",save);
 const saved = localStorage.getItem("trackCyclingTimer");
 if(saved){
