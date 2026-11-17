@@ -446,3 +446,43 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 @supports (height: 100dvh){
   body{min-height:100dvh}
 }
+
+/* v24 result report inspired by legacy timing summary */
+.result-report{padding:16px}
+.result-title-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap
+}
+.result-title-row h2{margin:0;font-size:24px}
+.result-mail-tools{display:flex;gap:8px;align-items:center;flex:1;justify-content:flex-end}
+.result-mail-tools input{max-width:280px;margin:0;font-size:14px;padding:9px}
+.result-mail-tools button{width:auto;margin:0;padding:10px 16px;font-size:14px}
+.result-summary-box{
+  margin-top:12px;border:1px solid #475569;border-radius:10px;padding:10px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px;
+  background:#111827
+}
+.result-summary-box div{min-width:0}
+.result-summary-box span{display:block;font-size:11px;color:#94a3b8}
+.result-summary-box strong{
+  display:block;font-size:17px;margin-top:2px;white-space:normal;overflow-wrap:anywhere
+}
+.result-table-wrap{margin-top:10px;max-height:440px;border:1px solid #334155}
+.result-table{font-size:12px}
+.result-table th{background:#111827;position:sticky;top:0;z-index:1}
+.result-table th,.result-table td{padding:7px 6px;text-align:right}
+.result-table th:first-child,.result-table td:first-child{text-align:center}
+.result-table th:last-child,.result-table td:last-child{text-align:left}
+.result-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.result-actions button{margin:0}
+
+@media(max-width:800px){
+  .result-summary-box{grid-template-columns:1fr 1fr}
+  .result-title-row{align-items:flex-start}
+  .result-mail-tools{width:100%;justify-content:stretch}
+  .result-mail-tools input{max-width:none;flex:1}
+}
+@media(max-width:520px){
+  .result-summary-box{grid-template-columns:1fr}
+  .result-mail-tools{flex-direction:column}
+  .result-mail-tools button,.result-mail-tools input{width:100%}
+}
