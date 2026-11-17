@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111827">
   <title>Track Cycling Timer</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=23">
+  <link rel="stylesheet" href="./styles.css?v=24">
 </head>
 <body>
 <div id="lapBoard" class="lap-board" aria-live="assertive" aria-hidden="true">
@@ -162,21 +162,47 @@
 </div>
 </section>
 
-<section class="card">
-<div class="summary">
-<span>Split <strong id="lapCount">0</strong></span>
-<span>Last <strong id="lastLap">—</strong></span>
-<span>Speed <strong id="lastSpeed">—</strong></span>
-<span>Cadence <strong id="lastCadence">—</strong></span>
-<span>Δ Target <strong id="delta">—</strong></span>
-</div>
-<div class="table-wrap">
-<table>
-<thead><tr><th>#</th><th>Dist.</th><th>Seg.</th><th>Time</th><th>Total</th><th>Leader</th><th>Gear</th><th>km/h</th><th>rpm</th><th>Δ</th></tr></thead>
-<tbody id="lapsBody"></tbody>
-</table>
-</div>
-<div class="grid2 export-actions"><button id="exportBtn">匯出精簡 CSV</button><button id="exportXlsxBtn" class="primary">匯出 Excel 報告</button></div>
+<section class="card result-report" id="resultReport">
+  <div class="result-title-row">
+    <h2 id="resultTitle">Results</h2>
+    <div class="result-mail-tools">
+      <input id="resultEmail" type="email" inputmode="email" placeholder="收件人 Email">
+      <button id="emailResultBtn">寄送結果</button>
+    </div>
+  </div>
+
+  <div class="result-summary-box">
+    <div><span>Athlete/Team</span><strong id="resultAthlete">—</strong></div>
+    <div><span>Distance</span><strong id="resultDistance">—</strong></div>
+    <div><span>Time</span><strong id="resultTime">—</strong></div>
+    <div><span>Gearing</span><strong id="resultGearing">—</strong></div>
+    <div><span>Average Speed</span><strong id="resultAvgSpeed">—</strong></div>
+    <div><span>Average Cadence</span><strong id="resultAvgCadence">—</strong></div>
+  </div>
+
+  <div class="table-wrap result-table-wrap">
+    <table class="result-table">
+      <thead>
+        <tr>
+          <th>Lap</th>
+          <th>Distance m</th>
+          <th>Time</th>
+          <th>Lap Time</th>
+          <th>vs Previous</th>
+          <th>Lap Speed kph</th>
+          <th>Overall Avg kph</th>
+          <th>Cadence rpm</th>
+          <th>Leader</th>
+        </tr>
+      </thead>
+      <tbody id="lapsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="result-actions">
+    <button id="exportBtn">匯出精簡 CSV</button>
+    <button id="exportXlsxBtn" class="primary">匯出 Excel 報告</button>
+  </div>
 </section>
 
 <section class="card">
@@ -208,6 +234,6 @@
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="./app.js?v=23"></script>
+<script src="./app.js?v=24"></script>
 </body>
 </html>
