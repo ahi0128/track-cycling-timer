@@ -367,27 +367,110 @@ function renderFullLaps(){
   ).join("");
   renderQuarterCharts();
 }
+function formatResultTime(ms){
+  if(!ms) return "0.00";
+  const s=ms/1000;
+  return s>=60?fmt(ms):(s.toFixed(2));
+}
+function resultDateLabel(){
+  const d=new Date();
+  return d.getFullYear()+" "+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+}
+function resultGearingText(){
+  if(!state.riders.length) return "—";
+  const values=state.riders.map(n=>{
+    const g=ensureRiderSetup(n);
+    return n+" "+g.chainring+"×"+g.sprocket;
+  });
+  const unique=[...new Set(state.riders.map(n=>{
+    const g=ensureRiderSetup(n); return g.chainring+"×"+g.sprocket;
+  }))];
+  return unique.length===1?unique[0]:values.join(" / ");
+}
+function resultEmailBody(){
+  const totalDistance=state.laps.at(-1)?.cumulativeDistanceM||0;
+  const totalMs=state.laps.at(-1)?.totalMs||currentElapsed();
+  const avgSpeed=totalMs?totalDistance/(totalMs/1000)*3.6:0;
+  const avgCadence=state.laps.length?state.laps.reduce((s,x)=>s+x.cadenceRpm,0)/state.laps.length:0;
+  const lines=[
+    "Results: "+resultDateLabel()+" - "+totalDistance.toFixed(1)+" m",
+    "",
+    "Athlete/Team: "+(state.riders.join(" / ")||"—"),
+    "Distance: "+totalDistance.toFixed(1)+" m",
+    "Time: "+formatResultTime(totalMs),
+    "Gearing: "+resultGearingText(),
+    "Average Speed: "+avgSpeed.toFixed(1)+" kph",
+    "Average Cadence: "+avgCadence.toFixed(1)+" rpm",
+    "",
+    "Lap | Distance | Time | Lap Time | vs Previous | Speed | Overall Avg | Cadence | Leader"
+  ];
+  let cumulative=0;
+  state.laps.forEach((x,i)=>{
+    cumulative+=x.distanceM;
+    const prev=i?state.laps[i-1].lapMs:null;
+    const diff=prev==null?0:(x.lapMs-prev)/1000;
+    const overall=x.totalMs?cumulative/(x.totalMs/1000)*3.6:0;
+    lines.push([
+      x.lap,
+      cumulative.toFixed(1)+" m",
+      formatResultTime(x.totalMs),
+      (x.lapMs/1000).toFixed(2),
+      (diff>=0?"+":"")+diff.toFixed(2),
+      x.speedKph.toFixed(1)+" kph",
+      overall.toFixed(1)+" kph",
+      x.cadenceRpm.toFixed(1)+" rpm",
+      x.leader
+    ].join(" | "));
+  });
+  return lines.join("\n");
+}
+
 function render(){
   $("leader").textContent = state.riders[state.leaderIndex] || "—";
   $("leader").style.color = leaderName()?riderColor(leaderName()):"";
-  $("lapCount").textContent = state.laps.length;
-  const last = state.laps.at(-1);
-  $("lastLap").textContent = last ? lapFmt(last.lapMs) : "—";
-  $("lastSpeed").textContent = last ? last.speedKph.toFixed(1)+" km/h" : "—";
-  $("lastCadence").textContent = last ? last.cadenceRpm.toFixed(1)+" rpm" : "—";
-  $("delta").textContent = last ? (last.delta>=0?"+":"") + last.delta.toFixed(2)+"s" : "—";
   renderTimerController();
+
   const fullForTimer=buildFullLaps();
   const previousFull=fullForTimer.at(-1);
   const previousFullEl=$("previousFullLap");
   if(previousFullEl) previousFullEl.textContent=previousFull?lapFmt(previousFull.lapMs)+" s":"—";
   const currentFullEl=$("currentFullLapClock");
   if(currentFullEl) currentFullEl.textContent=(currentFullLapElapsed(currentElapsed())/1000).toFixed(3);
-  renderTimerController();
+
   $("status").textContent = state.running ? "計時中" : (state.elapsed>0 ? "已暫停" : "尚未開始");
-  $("lapsBody").innerHTML = state.laps.map(x =>
-    '<tr><td>'+x.lap+'</td><td>'+x.cumulativeDistanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+x.distanceM.toFixed(3).replace(/\.000$/,"")+'</td><td>'+lapFmt(x.lapMs)+'</td><td>'+fmt(x.totalMs)+'</td><td>'+x.leader+'</td><td>'+x.chainring+'×'+x.sprocket+'</td><td>'+x.speedKph.toFixed(1)+'</td><td>'+x.cadenceRpm.toFixed(1)+'</td><td>'+(x.delta>=0?"+":"")+x.delta.toFixed(2)+'</td></tr>'
-  ).join("");
+
+  const totalDistance=state.laps.at(-1)?.cumulativeDistanceM||0;
+  const totalMs=state.laps.at(-1)?.totalMs||currentElapsed();
+  const avgSpeed=totalMs?totalDistance/(totalMs/1000)*3.6:0;
+  const avgCadence=state.laps.length?state.laps.reduce((s,x)=>s+x.cadenceRpm,0)/state.laps.length:0;
+
+  if($("resultTitle")) $("resultTitle").textContent="Results: "+resultDateLabel()+" - "+totalDistance.toFixed(1)+" m";
+  if($("resultAthlete")) $("resultAthlete").textContent=state.riders.join(" / ")||"—";
+  if($("resultDistance")) $("resultDistance").textContent=totalDistance.toFixed(1)+" m";
+  if($("resultTime")) $("resultTime").textContent=formatResultTime(totalMs);
+  if($("resultGearing")) $("resultGearing").textContent=resultGearingText();
+  if($("resultAvgSpeed")) $("resultAvgSpeed").textContent=state.laps.length?avgSpeed.toFixed(1)+" kph":"—";
+  if($("resultAvgCadence")) $("resultAvgCadence").textContent=state.laps.length?avgCadence.toFixed(1)+" rpm":"—";
+
+  let cumulative=0;
+  $("lapsBody").innerHTML = state.laps.map((x,i)=>{
+    cumulative+=Number(x.distanceM||0);
+    const prev=i?state.laps[i-1].lapMs:null;
+    const diff=prev==null?0:(x.lapMs-prev)/1000;
+    const overall=x.totalMs?cumulative/(x.totalMs/1000)*3.6:0;
+    return '<tr>'+
+      '<td>'+x.lap+'</td>'+
+      '<td>'+cumulative.toFixed(1)+'</td>'+
+      '<td>'+formatResultTime(x.totalMs)+'</td>'+
+      '<td>'+(x.lapMs/1000).toFixed(2)+'</td>'+
+      '<td>'+(diff>=0?"+":"")+diff.toFixed(2)+'</td>'+
+      '<td>'+x.speedKph.toFixed(1)+'</td>'+
+      '<td>'+overall.toFixed(1)+'</td>'+
+      '<td>'+x.cadenceRpm.toFixed(1)+'</td>'+
+      '<td style="color:'+riderColor(x.leader)+';font-weight:800">'+x.leader+'</td>'+
+    '</tr>';
+  }).join("");
+
   renderFullLaps();
   renderRotation();
 }
@@ -615,6 +698,18 @@ function makeChartCanvas(){
   ctx.fillText("Continuous segment speed (km/h)",left,24);
   return canvas;
 }
+const savedResultEmail=localStorage.getItem("trackCyclingResultEmail");
+if(savedResultEmail && $("resultEmail")) $("resultEmail").value=savedResultEmail;
+$("resultEmail")?.addEventListener("input",()=>localStorage.setItem("trackCyclingResultEmail",$("resultEmail").value.trim()));
+$("emailResultBtn")?.addEventListener("click",()=>{
+  if(!state.laps.length) return alert("目前沒有計時結果");
+  const to=$("resultEmail")?.value.trim()||"";
+  const totalDistance=state.laps.at(-1)?.cumulativeDistanceM||0;
+  const subject="Results: "+resultDateLabel()+" - "+totalDistance.toFixed(1)+" m";
+  const body=resultEmailBody();
+  window.location.href="mailto:"+encodeURIComponent(to)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+});
+
 $("exportBtn").addEventListener("click",()=>{
   if(!state.laps.length) return alert("目前沒有圈速資料");
   const rows=compactCsvRows();
