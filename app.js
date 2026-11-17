@@ -730,163 +730,91 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
   wb.creator="Track Cycling Timer";
   wb.created=new Date();
 
-  const ws=wb.addWorksheet("Report",{
+  const ws=wb.addWorksheet("Results",{
     pageSetup:{
       paperSize:9,
       orientation:"landscape",
       fitToPage:true,
       fitToWidth:1,
-      fitToHeight:0,
+      fitToHeight:1,
       horizontalCentered:true,
       verticalCentered:false,
-      margins:{left:0.18,right:0.18,top:0.2,bottom:0.2,header:0.05,footer:0.05}
+      margins:{left:0.18,right:0.18,top:0.22,bottom:0.22,header:0.08,footer:0.08}
     }
   });
   ws.views=[{showGridLines:false}];
-  ws.properties.defaultRowHeight=16;
+  ws.properties.defaultRowHeight=17;
 
-  // Fixed report width: A:J only. Never grow horizontally with split count.
-  const widths=[8,13,13,13,18,10,12,12,12,12];
+  // A:I is the entire printable report. No hidden wide data area.
+  const widths=[7,12,12,12,16,14,15,14,18];
   widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
 
-  const target=targetSpeedKph();
   const totalDistance=state.laps.at(-1)?.cumulativeDistanceM||0;
-  const totalTime=state.laps.at(-1)?.totalMs/1000||0;
-  const avgSpeed=totalTime?totalDistance/totalTime*3.6:0;
+  const totalMs=state.laps.at(-1)?.totalMs||currentElapsed();
+  const avgSpeed=totalMs?totalDistance/(totalMs/1000)*3.6:0;
   const avgCadence=state.laps.length?state.laps.reduce((s,x)=>s+x.cadenceRpm,0)/state.laps.length:0;
+  const target=targetSpeedKph();
 
-  ws.mergeCells("A1:J1");
-  ws.getCell("A1").value="Track Cycling Timing Report";
+  // Title
+  ws.mergeCells("A1:I1");
+  ws.getCell("A1").value="Results: "+resultDateLabel()+" - "+totalDistance.toFixed(1)+" m";
   ws.getCell("A1").font={bold:true,size:18,color:{argb:"FFFFFFFF"}};
-  ws.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF111827"}};
-  ws.getCell("A1").alignment={horizontal:"center",vertical:"middle"};
+  ws.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1F2937"}};
+  ws.getCell("A1").alignment={horizontal:"left",vertical:"middle"};
   ws.getRow(1).height=28;
 
-  // Fixed information block, balanced across full page width.
-  const info=[
-    ["Track",Number($("trackLength").value)||250,"Segment",Number($("segmentDistance").value)||0,"Target time",Number($("targetLap").value)||0,"Target speed",Number(target.toFixed(2)),"",""],
-    ["Total distance",Number(totalDistance.toFixed(1)),"Total time",Number(totalTime.toFixed(3)),"Avg speed",Number(avgSpeed.toFixed(2)),"Avg cadence",Number(avgCadence.toFixed(1)),"",""]
+  // Legacy-app style summary: labels at left, value beside them, only once.
+  const summaryRows=[
+    ["Athlete/Team",state.riders.join(" / ")||"—"],
+    ["Distance",totalDistance.toFixed(1)+" m"],
+    ["Time",formatResultTime(totalMs)],
+    ["Gearing",resultGearingText()],
+    ["Average Speed",avgSpeed.toFixed(1)+" kph"],
+    ["Average Cadence",avgCadence.toFixed(1)+" rpm"]
   ];
-  info.forEach((vals,idx)=>{
-    const r=2+idx;
-    ws.getRow(r).values=vals;
-    ws.getRow(r).font={size:9.5};
-    for(let c=1;c<=8;c+=2){
-      ws.getCell(r,c).font={bold:true,color:{argb:"FF475569"}};
-      ws.getCell(r,c+1).font={bold:true,color:{argb:"FF111827"}};
-    }
+  summaryRows.forEach((r,idx)=>{
+    const row=2+idx;
+    ws.mergeCells(row,2,row,9);
+    ws.getCell(row,1).value=r[0];
+    ws.getCell(row,2).value=r[1];
+    ws.getCell(row,1).font={bold:true,size:10,color:{argb:"FF374151"}};
+    ws.getCell(row,2).font={size:10};
+    ws.getCell(row,1).alignment={horizontal:"left"};
+    ws.getCell(row,2).alignment={horizontal:"left"};
   });
 
-  ws.mergeCells("A5:J5");
-  ws.getCell("A5").value="Rider setup";
-  ws.getCell("A5").font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
-  ws.getCell("A5").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334155"}};
-
-  ws.getRow(6).values=["Rider","Gear","Tire","Circ. mm","Rollout m","Color","","","",""];
-  ws.getRow(6).font={bold:true,size:9};
-  ws.getRow(6).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE2E8F0"}};
-
-  let rr=7;
-  state.riders.forEach(n=>{
-    const g=ensureRiderSetup(n);
-    ws.getRow(rr).values=[n,g.chainring+"×"+g.sprocket,g.tire,g.circumferenceMm,Number(rolloutMeters(g).toFixed(3)),"","","","",""];
-    ws.getCell(rr,6).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+riderColor(n).replace("#","")}};
-    ws.getRow(rr).font={size:9};
-    rr++;
-  });
-
-  // Full-width chart image across A:J.
-  const chartTitleRow=rr+1;
-  ws.mergeCells("A"+chartTitleRow+":J"+chartTitleRow);
-  ws.getCell("A"+chartTitleRow).value="Segment speed profile — target line / rider colors / red border below target";
-  ws.getCell("A"+chartTitleRow).font={bold:true,size:11,color:{argb:"FFFFFFFF"}};
-  ws.getCell("A"+chartTitleRow).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334155"}};
-
-  const imageRow=chartTitleRow+1;
-  let chartInserted=false;
-  try{
-    const canvas=makeChartCanvas();
-    const dataUrl=canvas.toDataURL("image/png");
-    const imageId=wb.addImage({base64:dataUrl,extension:"png"});
-    ws.addImage(imageId,{tl:{col:0,row:imageRow-1},ext:{width:980,height:285}});
-    chartInserted=true;
-  }catch(e){}
-
-  // Compact fixed-width fallback visualization in A:J.
-  // Each row contains up to 10 sequential split cells, so report width stays constant.
-  const fallbackStart=imageRow+15;
-  ws.mergeCells("A"+fallbackStart+":J"+fallbackStart);
-  ws.getCell("A"+fallbackStart).value="Speed blocks (fallback view)";
-  ws.getCell("A"+fallbackStart).font={bold:true,size:9,color:{argb:"FF475569"}};
-
-  const blockRows=Math.ceil(state.laps.length/10);
-  for(let br=0;br<blockRows;br++){
-    const valueRow=fallbackStart+1+(br*3);
-    const barRow=valueRow+1;
-    const labelRow=valueRow+2;
-    for(let j=0;j<10;j++){
-      const idx=br*10+j;
-      if(idx>=state.laps.length) break;
-      const d=state.laps[idx];
-      const col=j+1;
-      const delta=d.speedKph-target;
-
-      ws.getCell(valueRow,col).value=Number(d.speedKph.toFixed(1));
-      ws.getCell(valueRow,col).font={size:7,bold:true};
-      ws.getCell(valueRow,col).alignment={horizontal:"center"};
-
-      ws.getCell(barRow,col).value="";
-      ws.getCell(barRow,col).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+riderColor(d.leader).replace("#","")}};
-      if(delta<0){
-        ws.getCell(barRow,col).border={
-          top:{style:"medium",color:{argb:"FFEF4444"}},
-          left:{style:"medium",color:{argb:"FFEF4444"}},
-          bottom:{style:"medium",color:{argb:"FFEF4444"}},
-          right:{style:"medium",color:{argb:"FFEF4444"}}
-        };
-      }
-      ws.getRow(barRow).height=22;
-
-      ws.getCell(labelRow,col).value="S"+d.lap;
-      ws.getCell(labelRow,col).font={size:7,color:{argb:"FF64748B"}};
-      ws.getCell(labelRow,col).alignment={horizontal:"center"};
-    }
-  }
-
-  // Dynamic table starts after chart/fallback and uses full A:J width.
-  const tableStart=fallbackStart+1+(blockRows*3)+2;
-  const headers=["Split","Dist. m","Seg. s","Total s","Leader","Pull","Speed","Δ Target","Cadence","Lap"];
+  // Dynamic result table directly under summary.
+  const tableStart=9;
+  const headers=["Lap","Distance m","Time","Lap Time","vs Previous","Lap Speed kph","Overall Avg kph","Cadence rpm","Leader"];
   ws.getRow(tableStart).values=headers;
+  ws.getRow(tableStart).height=24;
   ws.getRow(tableStart).font={bold:true,color:{argb:"FFFFFFFF"},size:9};
-  ws.getRow(tableStart).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF111827"}};
-  ws.getRow(tableStart).alignment={horizontal:"center",vertical:"middle"};
-  ws.getRow(tableStart).height=20;
+  ws.getRow(tableStart).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1F2937"}};
+  ws.getRow(tableStart).alignment={horizontal:"center",vertical:"middle",wrapText:true};
 
-  const perLap=segmentsPerFullLap();
+  let cumulative=0;
   state.laps.forEach((x,i)=>{
     const row=tableStart+1+i;
-    const delta=x.speedKph-target;
-    const lapNo=perLap?Math.ceil(x.lap/perLap):"";
+    cumulative+=Number(x.distanceM||0);
+    const prev=i?state.laps[i-1].lapMs:null;
+    const diff=prev==null?0:(x.lapMs-prev)/1000;
+    const overall=x.totalMs?cumulative/(x.totalMs/1000)*3.6:0;
     ws.getRow(row).values=[
       x.lap,
-      Number(x.cumulativeDistanceM.toFixed(3)),
-      Number((x.lapMs/1000).toFixed(3)),
-      Number((x.totalMs/1000).toFixed(3)),
-      x.leader,
-      x.pull,
-      Number(x.speedKph.toFixed(2)),
-      Number(delta.toFixed(2)),
+      Number(cumulative.toFixed(1)),
+      formatResultTime(x.totalMs),
+      Number((x.lapMs/1000).toFixed(2)),
+      Number(diff.toFixed(2)),
+      Number(x.speedKph.toFixed(1)),
+      Number(overall.toFixed(1)),
       Number(x.cadenceRpm.toFixed(1)),
-      lapNo
+      x.leader
     ];
     ws.getRow(row).font={size:8.5};
-    ws.getCell(row,5).font={bold:true,color:{argb:"FF"+riderColor(x.leader).replace("#","")}};
-    ws.getCell(row,5).alignment={horizontal:"left"};
-    for(let c=1;c<=10;c++){
-      ws.getCell(row,c).alignment={vertical:"middle",horizontal:c===5?"left":"center"};
-    }
-    if(delta<0){
-      for(let c=1;c<=10;c++){
+    ws.getRow(row).alignment={vertical:"middle"};
+    ws.getCell(row,9).font={bold:true,color:{argb:"FF"+riderColor(x.leader).replace("#","")}};
+    if(target && x.speedKph<target){
+      for(let c=1;c<=9;c++){
         ws.getCell(row,c).border={
           top:{style:"thin",color:{argb:"FFEF4444"}},
           left:{style:"thin",color:{argb:"FFEF4444"}},
@@ -897,20 +825,55 @@ $("exportXlsxBtn").addEventListener("click",async()=>{
     }
   });
 
-  const endRow=tableStart+state.laps.length;
-  ws.pageSetup.printArea="A1:J"+endRow;
+  // Speed chart goes LAST, like a report footer, not between summary and table.
+  const chartTitleRow=tableStart+state.laps.length+2;
+  ws.mergeCells(chartTitleRow,1,chartTitleRow,9);
+  ws.getCell(chartTitleRow,1).value="Segment Speed Profile";
+  ws.getCell(chartTitleRow,1).font={bold:true,size:10,color:{argb:"FFFFFFFF"}};
+  ws.getCell(chartTitleRow,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF334155"}};
+
+  try{
+    const canvas=makeChartCanvas();
+    const imageId=wb.addImage({base64:canvas.toDataURL("image/png"),extension:"png"});
+    ws.addImage(imageId,{tl:{col:0,row:chartTitleRow},ext:{width:960,height:250}});
+  }catch(e){}
+
+  const endRow=chartTitleRow+15;
+  ws.pageSetup.printArea="A1:I"+endRow;
   ws.pageSetup.fitToWidth=1;
-  ws.pageSetup.fitToHeight=0;
-  ws.autoFilter={from:{row:tableStart,column:1},to:{row:endRow,column:10}};
+  ws.pageSetup.fitToHeight=1;
+  ws.pageSetup.horizontalCentered=true;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const filename="track-results-"+resultDateLabel().replaceAll(" ","-")+"-"+totalDistance.toFixed(0)+"m.xlsx";
+  const file=new File([blob],filename,{type:blob.type});
+
+  // iPad/iPhone: prefer system Share Sheet. This lets Mail/Gmail receive the xlsx as an attachment.
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      await navigator.share({
+        title:"Results: "+resultDateLabel()+" - "+totalDistance.toFixed(1)+" m",
+        text:"Track cycling timing results",
+        files:[file]
+      });
+      return;
+    }
+  }catch(e){
+    if(e && e.name==="AbortError") return;
+  }
+
+  // Desktop / unsupported browser fallback.
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="track-session-report-"+new Date().toISOString().replaceAll(":","-")+".xlsx";
+  const url=URL.createObjectURL(blob);
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
 });
+
 function actionDisplay(action){
   if(action==="startStop") return state.running?"STOP":"START";
   return CONTROLLER_LABELS[action]||"未指定";
