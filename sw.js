@@ -1,5 +1,5 @@
-const CACHE="track-cycling-timer-v23";
-const ASSETS=["./","./index.html","./styles.css?v=23","./app.js?v=23","./manifest.webmanifest"];
+const CACHE="track-cycling-timer-v24";
+const ASSETS=["./","./index.html","./styles.css?v=24","./app.js?v=24","./manifest.webmanifest"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });
