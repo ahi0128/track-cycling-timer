@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111827">
   <title>Track Cycling Timer</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=25">
+  <link rel="stylesheet" href="./styles.css?v=27">
 </head>
 <body>
 <div id="lapBoard" class="lap-board" aria-live="assertive" aria-hidden="true">
@@ -38,6 +38,8 @@
           <option value="quarter">1/4 圈</option>
           <option value="half">1/2 圈</option>
           <option value="full">1 圈</option>
+          <option value="100m">固定 100 m</option>
+          <option value="200m">固定 200 m（爭先賽）</option>
           <option value="custom">自訂</option>
         </select>
       </label>
@@ -234,6 +236,6 @@
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="./app.js?v=25"></script>
+<script src="./app.js?v=27"></script>
 </body>
 </html>
