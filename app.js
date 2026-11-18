@@ -164,13 +164,26 @@ function syncSegmentDistance(){
   const track = Number($("trackLength").value) || 250;
   const preset = $("segmentPreset").value;
   let distance = Number($("segmentDistance").value) || track;
+
   if(preset==="quarter") distance = track/4;
   if(preset==="half") distance = track/2;
   if(preset==="full") distance = track;
+  if(preset==="100m") distance = 100;
+  if(preset==="200m") distance = 200;
+
   if(preset!=="custom") $("segmentDistance").value = distance.toFixed(3).replace(/\.000$/,"");
-  $("distanceHint").textContent = preset==="custom"
-    ? "自訂計時距離："+distance.toFixed(3)+" m"
-    : track.toFixed(3).replace(/\.000$/,"")+" m 場地 × "+(preset==="quarter"?"1/4":preset==="half"?"1/2":"1")+" 圈 = "+distance.toFixed(3)+" m";
+
+  let hint="";
+  if(preset==="custom"){
+    hint="自訂計時距離："+distance.toFixed(3)+" m";
+  }else if(preset==="100m"){
+    hint="固定距離計時：100 m";
+  }else if(preset==="200m"){
+    hint="固定距離計時：200 m（可用於爭先賽 Flying 200 m）";
+  }else{
+    hint=track.toFixed(3).replace(/\.000$/,"")+" m 場地 × "+(preset==="quarter"?"1/4":preset==="half"?"1/2":"1")+" 圈 = "+distance.toFixed(3)+" m";
+  }
+  $("distanceHint").textContent = hint;
 }
 function renderRoster(){
   const names = $("riders").value.split(/\n|,/).map(x=>x.trim()).filter(Boolean);
