@@ -214,7 +214,7 @@ function setLeaderByName(name, eventType="manual_leader"){
   if(!name || !state.riders.includes(name)) return;
   const from=leaderName();
   state.leaderIndex=state.riders.indexOf(name);
-  state.events.push({type:eventType,atMs:currentElapsed(),from,to:name,pull:state.pull});
+  state.events.push({type:eventType,atMs:currentElapsed(),from,to:name,pull:state.pull,previousPull:Math.max(1,state.pull-1)});
   renderRotation(); render(); save();
 }
 function renderRotation(){
@@ -229,7 +229,14 @@ function renderRotation(){
   document.querySelectorAll(".rider-chip").forEach(btn=>btn.addEventListener("click",()=>{
     const n=btn.dataset.name;
     if(state.activeRiders.includes(n)) setLeaderByName(n);
-    else { state.activeRiders.push(n); state.events.push({type:"return",atMs:currentElapsed(),rider:n}); renderRotation(); render(); save(); }
+    else {
+      const previousActive=[...state.activeRiders];
+      const previousLeader=leaderName();
+      const previousPull=state.pull;
+      state.activeRiders.push(n);
+      state.events.push({type:"return",atMs:currentElapsed(),rider:n,previousActive,previousLeader,previousPull});
+      renderRotation(); render(); save();
+    }
   }));
 }
 function segmentsPerFullLap(){
@@ -558,7 +565,7 @@ $("lapBtn").addEventListener("click",()=>{
     speedKph:speed,
     cadenceRpm:cadence
   });
-  state.events.push({type:"lap",atMs:total,leader,pull:state.pull});
+  state.events.push({type:"lap",atMs:total,leader,pull:state.pull,lapNumber:state.laps.length});
   const perLap=segmentsPerFullLap();
   const completedFullLap=perLap && state.laps.length%perLap===0 ? buildFullLaps().at(-1) : null;
   render();
@@ -573,7 +580,7 @@ $("changeBtn").addEventListener("click",()=>{
   if(!to) return;
   state.leaderIndex=state.riders.indexOf(to);
   state.pull+=1;
-  state.events.push({type:"change",atMs:t,from,to,pull:state.pull});
+  state.events.push({type:"change",atMs:t,from,to,pull:state.pull,previousPull:Math.max(1,state.pull-1)});
   renderRotation(); render(); save();
 });
 $("setLeaderBtn").addEventListener("click",()=>{
@@ -585,18 +592,54 @@ $("outBtnTop").addEventListener("click",()=>{
   if(!out) return;
   if(state.activeRiders.length<=1) return alert("至少需要保留一位有效選手");
   const next=nextActiveLeader();
+  const previousActive=[...state.activeRiders];
+  const previousLeader=leaderName();
+  const previousPull=state.pull;
   state.activeRiders=state.activeRiders.filter(n=>n!==out);
-  state.events.push({type:"out",atMs:currentElapsed(),rider:out,next});
+  state.events.push({type:"out",atMs:currentElapsed(),rider:out,next,previousActive,previousLeader,previousPull});
   if(next && next!==out){ state.leaderIndex=state.riders.indexOf(next); state.pull+=1; }
   renderRotation(); render(); save();
 });
 $("undoBtn").addEventListener("click",()=>{
-  if(state.laps.length){
-    state.laps.pop();
-    state.lastLapAt = state.laps.at(-1)?.totalMs || 0;
-    render();
-    save();
+  // Find the latest reversible event. START/STOP are intentionally skipped.
+  let eventIndex=-1;
+  for(let i=state.events.length-1;i>=0;i--){
+    if(["lap","change","manual_change","manual_leader","out","return"].includes(state.events[i].type)){
+      eventIndex=i;
+      break;
+    }
   }
+  if(eventIndex<0) return;
+
+  const ev=state.events[eventIndex];
+
+  if(ev.type==="lap"){
+    if(state.laps.length){
+      state.laps.pop();
+      state.lastLapAt=state.laps.at(-1)?.totalMs||0;
+    }
+  }else if(ev.type==="change"){
+    if(ev.from && state.riders.includes(ev.from)) state.leaderIndex=state.riders.indexOf(ev.from);
+    state.pull=ev.previousPull||Math.max(1,state.pull-1);
+  }else if(ev.type==="manual_change" || ev.type==="manual_leader"){
+    if(ev.from && state.riders.includes(ev.from)) state.leaderIndex=state.riders.indexOf(ev.from);
+    state.pull=ev.previousPull||Math.max(1,state.pull-1);
+  }else if(ev.type==="out"){
+    if(Array.isArray(ev.previousActive)) state.activeRiders=[...ev.previousActive];
+    else if(!state.activeRiders.includes(ev.rider)) state.activeRiders.push(ev.rider);
+    if(ev.previousLeader && state.riders.includes(ev.previousLeader)) state.leaderIndex=state.riders.indexOf(ev.previousLeader);
+    state.pull=ev.previousPull||Math.max(1,state.pull-1);
+  }else if(ev.type==="return"){
+    if(Array.isArray(ev.previousActive)) state.activeRiders=[...ev.previousActive];
+    else state.activeRiders=state.activeRiders.filter(n=>n!==ev.rider);
+    if(ev.previousLeader && state.riders.includes(ev.previousLeader)) state.leaderIndex=state.riders.indexOf(ev.previousLeader);
+    state.pull=ev.previousPull||state.pull;
+  }
+
+  state.events.splice(eventIndex,1);
+  renderRotation();
+  render();
+  save();
 });
 $("resetBtn").addEventListener("click",()=>{
   const t=Date.now();
