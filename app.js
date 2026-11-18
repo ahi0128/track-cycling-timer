@@ -22,6 +22,7 @@ let state = {
 };
 let raf = null;
 let lapBoardTimer = null;
+let resetArmUntil = 0;
 let controllerLearnSlot=null;
 let controllerSlots={};
 let gamepadPrev={};
@@ -585,7 +586,14 @@ $("undoBtn").addEventListener("click",()=>{
   }
 });
 $("resetBtn").addEventListener("click",()=>{
-  if(!confirm("確定清除本次計時？")) return;
+  const t=Date.now();
+  if(t>resetArmUntil){
+    resetArmUntil=t+1200;
+    const status=$("status");
+    if(status) status.textContent="再按一次 RESET 以重置";
+    return;
+  }
+  resetArmUntil=0;
   cancelAnimationFrame(raf);
   state.running=false; state.startAt=0; state.elapsed=0; state.lastLapAt=0; state.pull=1; state.laps=[]; state.events=[];
   clearTimeout(lapBoardTimer); hideFullLapBoard();
